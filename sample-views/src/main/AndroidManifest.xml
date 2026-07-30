@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:name=".SampleViewsApplication"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.SampleViews">
+
+        <activity
+            android:name=".HomeActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".screens.SlowCreateActivity" android:exported="false" />
+        <activity android:name=".screens.SlowCreateCleanActivity" android:exported="false" />
+        <activity android:name=".screens.SlowResumeActivity" android:exported="false" />
+        <activity android:name=".screens.SlowResumeCleanActivity" android:exported="false" />
+        <activity android:name=".screens.MainThreadDiskReadActivity" android:exported="false" />
+        <activity android:name=".screens.MainThreadDiskReadCleanActivity" android:exported="false" />
+        <activity android:name=".screens.ActivityLeakActivity" android:exported="false" />
+        <activity android:name=".screens.ActivityLeakCleanActivity" android:exported="false" />
+        <activity android:name=".screens.UnregisteredReceiverActivity" android:exported="false" />
+        <activity android:name=".screens.UnregisteredReceiverCleanActivity" android:exported="false" />
+        <activity android:name=".screens.JankListActivity" android:exported="false" />
+        <activity android:name=".screens.JankListCleanActivity" android:exported="false" />
+        <activity android:name=".screens.RelaunchSelfActivity" android:exported="false" />
+        <activity android:name=".screens.StartForResultActivity" android:exported="false" />
+        <activity android:name=".screens.ResultProviderActivity" android:exported="false" />
+        <activity android:name=".fragments.FragmentHostActivity" android:exported="false" />
+
+        <!-- The only component in this app that does not run in the default process. -->
+        <activity
+            android:name=".screens.SecondaryProcessActivity"
+            android:exported="false"
+            android:process=":secondary" />
+
+    </application>
+
+</manifest>

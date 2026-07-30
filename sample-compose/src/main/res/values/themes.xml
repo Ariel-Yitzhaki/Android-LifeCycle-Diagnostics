@@ -1,0 +1,4 @@
+<resources>
+    <!-- Only covers the window before the first frame; Compose paints everything after that. -->
+    <style name="Theme.SampleCompose" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

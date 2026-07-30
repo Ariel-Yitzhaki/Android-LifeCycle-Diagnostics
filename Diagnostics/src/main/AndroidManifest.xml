@@ -1,4 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <application>
+
+        <!--
+            Merged into the manifest of every app that depends on this library, which is what makes
+            the three features start with no code in the app. See DiagnosticsInitProvider.
+
+            android:authorities has to be unique across every app installed on the device, so it is
+            built from ${applicationId}, which the build tools replace with the consuming app's own
+            id. Hardcoding a name here would stop two apps that both use this library from being
+            installed side by side.
+
+            android:initOrder is higher than the default of 0 so this provider is created before
+            other libraries' providers, and the features are therefore measuring during their setup
+            rather than starting after it.
+        -->
+        <provider
+            android:name="com.ariel.diagnostics.DiagnosticsInitProvider"
+            android:authorities="${applicationId}.diagnostics-init"
+            android:exported="false"
+            android:initOrder="100" />
+
+    </application>
+
 </manifest>

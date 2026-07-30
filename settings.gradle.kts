@@ -22,3 +22,5 @@ dependencyResolutionManagement {
 rootProject.name = "My Application"
 include(":app")
 include(":Diagnostics")
+include(":sample-views")
+include(":sample-compose")
