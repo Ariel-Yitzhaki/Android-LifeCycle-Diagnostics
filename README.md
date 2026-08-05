@@ -5,6 +5,7 @@ English findings to Logcat. It is written for people who are still learning the 
 there is no dashboard, no heap dump to read and no configuration to get wrong. You add the module,
 run the app, and read the log.
 
+[![JitPack](https://jitpack.io/v/Ariel-Yitzhaki/Android-LifeCycle-Diagnostics.svg)](https://jitpack.io/#Ariel-Yitzhaki/Android-LifeCycle-Diagnostics)
 ![Platform](https://img.shields.io/badge/platform-Android-brightgreen)
 ![minSdk](https://img.shields.io/badge/minSdk-29-blue)
 ![Language](https://img.shields.io/badge/language-Kotlin-7F52FF)
@@ -47,39 +48,63 @@ level, findings at warn level.
 - Android Gradle Plugin 8.13.2, Gradle 8.13, Kotlin 2.2.21
 - The library itself compiles against Java 11; the sample apps use Java 17
 
-The library depends on AndroidX `core-ktx`, `appcompat`, `material`, `fragment-ktx` (for
+The library brings three AndroidX dependencies with it: `core-ktx`, `fragment-ktx` (for
 `FragmentManager.FragmentLifecycleCallbacks`) and `androidx.metrics:metrics-performance` (JankStats,
 used to count dropped frames).
 
 ## Installation
 
-The library is not published to Maven Central or JitPack yet, so it is consumed as a Gradle module.
+Released through [JitPack](https://jitpack.io/#Ariel-Yitzhaki/Android-LifeCycle-Diagnostics).
 
-1. Copy the `Diagnostics` directory into the root of your project.
-
-2. Add the module in `settings.gradle.kts`:
+1. Add the JitPack repository in your `settings.gradle.kts`:
 
    ```kotlin
-   include(":Diagnostics")
+   dependencyResolutionManagement {
+       repositories {
+           google()
+           mavenCentral()
+           maven { url = uri("https://jitpack.io") }
+       }
+   }
    ```
 
-3. Depend on it from your app module's `build.gradle.kts`:
+2. Add the dependency in your app module's `build.gradle.kts`:
 
    ```kotlin
    dependencies {
-       debugImplementation(project(":Diagnostics"))
+       debugImplementation("com.github.Ariel-Yitzhaki.Android-LifeCycle-Diagnostics:Diagnostics:1.0.0")
    }
    ```
+
+   Replace `1.0.0` with the release you want; the badge above shows the newest one. Any tag, branch
+   name or commit hash works as a version, so `main-SNAPSHOT` tracks the tip of the branch.
 
    `debugImplementation` is the recommended configuration. The library asks for a garbage collection
    after every screen the user leaves and times every message the main thread runs, which is real
    work you do not want in a release build. The sample apps in this repository use plain
    `implementation` so that release builds of the samples still log.
 
-4. Run the app. There is no third step: no `Application` subclass, no `install()` call, no
+3. Run the app. There is no third step: no `Application` subclass, no `install()` call, no
    annotation. The library declares its own `ContentProvider` in its manifest, that manifest is
    merged into yours, and the provider starts the four features before your `Application.onCreate`
    runs. See [How it starts itself](#how-it-starts-itself).
+
+Groovy users, the same two additions:
+
+```groovy
+// settings.gradle
+maven { url 'https://jitpack.io' }
+
+// build.gradle
+debugImplementation 'com.github.Ariel-Yitzhaki.Android-LifeCycle-Diagnostics:Diagnostics:1.0.0'
+```
+
+### Building against the source instead
+
+To modify the library while using it, include it as a module rather than an artifact: copy the
+`Diagnostics` directory into your project, add `include(":Diagnostics")` to `settings.gradle.kts`,
+and depend on `debugImplementation(project(":Diagnostics"))`. That is what the two sample apps in
+this repository do.
 
 ## Reading the output
 
@@ -365,16 +390,13 @@ Diagnostics/                      the library
     blocking/                     feature 4, main-thread blocking and jank
 sample-views/                     sample app built with Views and Fragments
 sample-compose/                   sample app built with Compose and Navigation
-app/                              unused module left from project creation
+jitpack.yml                       JDK and build command used for JitPack releases
 ```
 
 Each feature package follows the same shape: an `object` with `install()`, one
 `ActivityLifecycleCallbacks` implementation, one `FragmentLifecycleCallbacks` implementation where
 relevant, plain data holders, a constants file, and a single logger class that is the only place the
 feature touches `Log`.
-
-The `app` module is the empty application module Android Studio created with the project. It has no
-sources and is not part of the library or the samples.
 
 ## Building
 
@@ -385,6 +407,18 @@ sources and is not part of the library or the samples.
 
 On Windows, use `gradlew.bat`. An `.aar` for the library is produced at
 `Diagnostics/build/outputs/aar/`.
+
+To try a release locally before tagging it, publish to your own Maven repository and consume it with
+`mavenLocal()`:
+
+```bash
+./gradlew :Diagnostics:publishToMavenLocal -Pgroup=com.github.Ariel-Yitzhaki.Android-LifeCycle-Diagnostics -Pversion=1.0.0-local
+```
+
+That is the same command JitPack runs, with the group and version it would supply. Releases
+themselves need nothing but a pushed tag: `jitpack.yml` pins JDK 17 and limits the build to
+`:Diagnostics`, and the tag becomes the version, so no version number is hardcoded anywhere in the
+build files.
 
 ## License
 

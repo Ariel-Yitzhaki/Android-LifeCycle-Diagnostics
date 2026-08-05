@@ -1,0 +1,13 @@
+# JitPack build configuration.
+#
+# jdk: the Android Gradle Plugin 8.13.2 used here requires JDK 17. JitPack's default is older, so
+# the build fails at startup without this.
+#
+# install: only the library is built. Without this override JitPack runs a full build, which would
+# compile sample-views and sample-compose as well, so a broken sample screen would fail a library
+# release even though the library itself is fine.
+jdk:
+  - openjdk17
+
+install:
+  - ./gradlew :Diagnostics:publishToMavenLocal

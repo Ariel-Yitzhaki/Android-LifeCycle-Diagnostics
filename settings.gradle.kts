@@ -19,8 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "My Application"
-include(":app")
+rootProject.name = "Android-LifeCycle-Diagnostics"
 include(":Diagnostics")
 include(":sample-views")
 include(":sample-compose")
