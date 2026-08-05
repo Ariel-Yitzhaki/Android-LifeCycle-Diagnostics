@@ -27,7 +27,7 @@ class LeakActivityCallbacks(
     // every rotate.
     override fun onActivityDestroyed(activity: Activity) {
         if (!activity.isChangingConfigurations) {
-            watcher.watch(activity, activity.javaClass.simpleName, "Activity")
+            watcher.watch(activity, activity.javaClass.simpleName, WatchedKind.ACTIVITY)
         }
 
         if (activity is FragmentActivity) {

@@ -41,10 +41,25 @@ class LeakWatcher(private val tally: LeakTally) {
         handler = Handler(thread.looper)
     }
 
-    // Starts watching one destroyed component. Called on the main thread from an Activity's or
-    // Fragment's onDestroy, or a Fragment view's onDestroyView. kind is "Activity", "Fragment" or
-    // "Fragment view".
-    fun watch(component: Any, screenName: String, kind: String) {
+    // Starts watching one destroyed Activity or Fragment. Called on the main thread from its
+    // onDestroy.
+    fun watch(component: Any, screenName: String, kind: WatchedKind) {
+        watchWithOwner(component, null, screenName, kind)
+    }
+
+    // Starts watching a destroyed Fragment view, called on the main thread from onDestroyView. The
+    // fragment is handed over as well, not to be watched itself but so the check can ask whether it
+    // outlived the view it is being given. See WatchedKind.
+    fun watchFragmentView(view: Any, fragment: Any, screenName: String) {
+        watchWithOwner(view, fragment, screenName, WatchedKind.FRAGMENT_VIEW)
+    }
+
+    private fun watchWithOwner(
+        component: Any,
+        owner: Any?,
+        screenName: String,
+        kind: WatchedKind,
+    ) {
         val currentHandler = handler
         if (currentHandler == null) {
             return
@@ -57,7 +72,11 @@ class LeakWatcher(private val tally: LeakTally) {
         // Passing the queue as the second argument registers the reference with it. From here on
         // `component` must not be stored anywhere else, and neither message below may capture it.
         val reference = WeakReference(component, clearedReferences)
-        val watchedComponent = WatchedComponent(id, screenName, kind, reference)
+        // Not registered with the queue: this one is never waited on, only asked a question at the
+        // end. `owner` is subject to the same rule as `component` from here on.
+        val ownerReference = if (owner == null) null else WeakReference(owner)
+        val watchedComponent =
+            WatchedComponent(id, screenName, kind, reference, ownerReference)
 
         // The map entry is added on the background thread so one thread owns the map from end to
         // end. A message posted with no delay always arrives before one posted with a delay.
@@ -89,7 +108,25 @@ class LeakWatcher(private val tally: LeakTally) {
         // exists to detect.
         val retained = watchedComponent.reference.get() != null
 
-        tally.recordResult(watchedComponent.screenName, watchedComponent.kind, retained)
+        tally.recordResult(watchedComponent.screenName, kindOf(watchedComponent), retained)
+    }
+
+    // Decides which tally a result belongs in. Only a Fragment view has an answer that is not known
+    // until now: whether its fragment outlived it, which is the difference between a fragment
+    // holding on to a view it should have released and something outside holding one. See
+    // WatchedKind for why the two must not be counted together.
+    private fun kindOf(watchedComponent: WatchedComponent): WatchedKind {
+        val ownerReference = watchedComponent.ownerReference
+        if (ownerReference == null) {
+            return watchedComponent.kind
+        }
+
+        // Compared with null on this one line and never put into a variable, for the same reason as
+        // the component above.
+        if (ownerReference.get() != null) {
+            return WatchedKind.VIEW_OF_LIVE_FRAGMENT
+        }
+        return watchedComponent.kind
     }
 
     // Empties the reference queue so it does not grow for the whole session. The retained answer

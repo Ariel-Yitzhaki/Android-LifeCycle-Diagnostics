@@ -12,8 +12,8 @@ class ScreenLeakRecord(
     /** Simple class name of the screen, for example "ActivityLeakActivity". */
     val screenName: String,
 
-    /** Which of "Activity", "Fragment" or "Fragment view" this tally counts. */
-    val kind: String,
+    /** What this tally counts, which also decides what the finding says to go and look at. */
+    val kind: WatchedKind,
 ) {
 
     /** How many instances of this screen class have been destroyed and checked this session. */
@@ -24,9 +24,4 @@ class ScreenLeakRecord(
 
     /** True once a finding has been printed, so it is not repeated on every later destruction. */
     var reported = false
-
-    // Builds the name this screen is printed under, for example "ActivityLeakActivity (Activity)".
-    fun label(): String {
-        return "$screenName ($kind)"
-    }
 }

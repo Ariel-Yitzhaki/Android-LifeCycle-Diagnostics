@@ -17,11 +17,24 @@ class WatchedComponent(
     val screenName: String,
 
     /**
-     * "Activity", "Fragment" or "Fragment view". Findings are grouped by screen name plus kind,
-     * because a Fragment and its view share a class name but are two separate things to watch.
+     * What this component is. Findings are grouped by screen name plus kind, because a Fragment and
+     * its view share a class name but are two separate things to watch.
+     *
+     * For a Fragment view this is only the answer for the case where the fragment went away with
+     * it. See [ownerReference].
      */
-    val kind: String,
+    val kind: WatchedKind,
 
     /** The only link back to the component. */
     val reference: WeakReference<Any>,
+
+    /**
+     * The Fragment that owned [reference] when this is a Fragment view, and null for everything
+     * else. Never used for anything but asking whether it is still there, which is what chooses
+     * between the two Fragment view kinds.
+     *
+     * Weak like the reference above: watching a view must not be the thing that keeps its fragment
+     * alive.
+     */
+    val ownerReference: WeakReference<Any>?,
 )

@@ -14,8 +14,10 @@ class LeakTally(private val logger: LeakLogger) {
 
     // Adds the result of one check to the tally for its screen class, and prints a finding if that
     // class has now shown a pattern. retained is true when the component was still in memory.
-    fun recordResult(screenName: String, kind: String, retained: Boolean) {
-        // The kind is part of the key because a Fragment and its view share a class name.
+    fun recordResult(screenName: String, kind: WatchedKind, retained: Boolean) {
+        // The kind is part of the key because a Fragment and its view share a class name, and
+        // because the two kinds of Fragment view are separate faults that would otherwise vote in
+        // the same tally. See WatchedKind.
         val key = "$screenName/$kind"
 
         var record = records[key]

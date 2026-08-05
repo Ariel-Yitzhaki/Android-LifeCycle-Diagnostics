@@ -18,7 +18,11 @@ class LeakFragmentCallbacks(
         if (view != null) {
             // Reported under the fragment's class name, because the view class is usually a
             // ConstraintLayout shared by half the app.
-            watcher.watch(view, f.javaClass.simpleName, "Fragment view")
+            //
+            // The fragment goes along with it so the check can see whether it outlived this view.
+            // Whether it did decides which of the two Fragment view kinds the result counts
+            // towards, and those are two different faults. See WatchedKind.
+            watcher.watchFragmentView(view, f, f.javaClass.simpleName)
         }
     }
 
@@ -26,6 +30,6 @@ class LeakFragmentCallbacks(
     // by its replacement, so there is no built-in reason for the old instance to still be
     // referenced afterwards.
     override fun onFragmentDestroyed(fm: FragmentManager, f: Fragment) {
-        watcher.watch(f, f.javaClass.simpleName, "Fragment")
+        watcher.watch(f, f.javaClass.simpleName, WatchedKind.FRAGMENT)
     }
 }
