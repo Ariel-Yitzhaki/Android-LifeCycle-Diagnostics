@@ -8,8 +8,7 @@ import java.util.Locale
  * Counts the frames each Activity draws while it is on screen, and how many of those were late,
  * using AndroidX JankStats. Prints one finding when a screen stops having dropped too many.
  *
- * A JankStats object watches one Window, so this keeps one record per visible Activity. Findings
- * name that Activity rather than asking ForegroundActivityTracker, which by onStop holds no name.
+ * A JankStats object watches one Window, so this keeps one record per visible Activity.
  */
 class JankTracker(private val logger: BlockingLogger) {
 
@@ -70,7 +69,6 @@ class JankTracker(private val logger: BlockingLogger) {
         reportIfJanky(record)
     }
 
-    // One line per visit, never per frame.
     private fun reportIfJanky(record: ScreenJankRecord) {
         if (record.totalFrames == 0) {
             return

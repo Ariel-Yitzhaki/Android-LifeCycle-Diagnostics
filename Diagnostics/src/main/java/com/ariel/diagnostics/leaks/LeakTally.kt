@@ -33,8 +33,7 @@ class LeakTally(private val logger: LeakLogger) {
     }
 
     // Prints a finding for the record once it has been destroyed enough times and at least half of
-    // those were retained. Both conditions exist because a single retention is nearly always noise;
-    // a screen retained again and again is the app's own bug.
+    // those were retained.
     private fun reportIfPattern(record: ScreenLeakRecord) {
         if (record.reported) {
             return

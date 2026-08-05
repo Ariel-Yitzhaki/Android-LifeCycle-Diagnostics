@@ -17,8 +17,7 @@ class MainThreadPrinter(private val watchdog: SlowMessageWatchdog) : Printer {
     private val finishMarker = "<<<<< Finished to"
 
     // Called by the Looper on the main thread, twice for every message it runs, which is thousands
-    // of times a minute in a busy app. startsWith() allocates nothing and stops at the first
-    // difference.
+    // of times a minute in a busy app.
     override fun println(x: String) {
         if (x.startsWith(dispatchMarker)) {
             watchdog.onMessageStarted()

@@ -3,8 +3,7 @@ package com.ariel.diagnostics.lifecycle
 import android.app.Application
 
 /**
- * Entry point for lifecycle timing: builds the pieces the feature is made of and registers its
- * Activity callbacks with the framework.
+ * Entry point for lifecycle timing: registers the feature's Activity callbacks with the framework.
  */
 object LifecycleDiagnostics {
 

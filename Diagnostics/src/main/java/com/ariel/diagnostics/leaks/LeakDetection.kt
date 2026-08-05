@@ -3,8 +3,8 @@ package com.ariel.diagnostics.leaks
 import android.app.Application
 
 /**
- * Entry point for leak detection: builds the pieces the feature is made of, starts the one
- * background thread it owns, and registers its own Activity callbacks with the framework.
+ * Entry point for leak detection: starts the one background thread the feature owns and registers
+ * its own Activity callbacks with the framework.
  */
 object LeakDetection {
 
@@ -13,9 +13,6 @@ object LeakDetection {
     private var installed = false
 
     // Safe to call more than once; every call after the first does nothing.
-    //
-    // Worth keeping to debug builds: this feature asks for a garbage collection a few seconds after
-    // every screen the user leaves.
     fun install(application: Application) {
         if (installed) {
             return

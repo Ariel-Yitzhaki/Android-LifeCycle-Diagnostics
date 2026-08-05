@@ -3,8 +3,8 @@ package com.ariel.diagnostics.callbacks
 import android.app.Application
 
 /**
- * Entry point for callback validation: builds the pieces the feature is made of and registers its
- * own Activity callbacks with the framework.
+ * Entry point for callback validation: registers the feature's own Activity callbacks with the
+ * framework.
  */
 object CallbackValidation {
 

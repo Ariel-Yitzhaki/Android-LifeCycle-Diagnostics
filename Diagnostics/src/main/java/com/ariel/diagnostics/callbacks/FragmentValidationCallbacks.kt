@@ -6,9 +6,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 
 /**
- * Passes Fragment lifecycle callbacks on to TransitionTracker, the way ActivityValidationCallbacks
- * does for Activities. View creation and destruction are counted rather than treated as lifecycle
- * states, because they can happen several times per fragment.
+ * Passes Fragment lifecycle callbacks on to TransitionTracker, counting view creation and
+ * destruction instead of treating them as lifecycle states.
  */
 class FragmentValidationCallbacks(
     private val tracker: TransitionTracker,

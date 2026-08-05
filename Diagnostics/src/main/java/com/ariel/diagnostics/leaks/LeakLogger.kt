@@ -5,8 +5,6 @@ import android.util.Log
 /** Prints this feature's findings to Logcat, one line each. */
 class LeakLogger {
 
-    // The hint is a fixed sentence: this feature knows a screen is being held but not by what, so
-    // it lists the usual causes instead of guessing.
     fun report(record: ScreenLeakRecord) {
         Log.w(
             LeakConstants.LOG_TAG,

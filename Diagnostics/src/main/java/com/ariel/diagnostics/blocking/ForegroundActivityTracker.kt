@@ -14,7 +14,6 @@ class ForegroundActivityTracker {
     @Volatile
     private var foregroundActivityName: String? = null
 
-    // Called on the main thread from onActivityResumed.
     fun onActivityResumed(activityName: String) {
         foregroundActivityName = activityName
     }

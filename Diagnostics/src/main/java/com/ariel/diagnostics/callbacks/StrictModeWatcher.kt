@@ -55,7 +55,6 @@ class StrictModeWatcher(private val logger: ValidationLogger) : StrictMode.OnVmV
         )
     }
 
-    // Called from onActivityResumed.
     fun onActivityResumed(activityName: String) {
         foregroundActivityName = activityName
     }

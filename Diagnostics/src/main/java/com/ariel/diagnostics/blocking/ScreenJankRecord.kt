@@ -17,8 +17,7 @@ class ScreenJankRecord(
 
     /**
      * The JankStats object delivering frames into these counts. Null only between this record being
-     * created and that object existing, because the frame listener has to be able to reach this
-     * record. See JankTracker.startTracking.
+     * created and JankTracker.startTracking filling it in.
      */
     var jankStats: JankStats? = null
 

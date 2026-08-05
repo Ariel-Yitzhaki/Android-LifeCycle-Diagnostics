@@ -10,7 +10,7 @@ import java.lang.ref.WeakReference
  */
 class WatchedComponent(
 
-    /** Key [LeakWatcher] files this component under. Never appears in a log line. */
+    /** Key [LeakWatcher] files this component under. */
     val id: Long,
 
     /** Simple class name of the screen this belongs to, for example "ActivityLeakActivity". */
@@ -22,6 +22,6 @@ class WatchedComponent(
      */
     val kind: String,
 
-    /** The only link back to the component, and deliberately a weak one. */
+    /** The only link back to the component. */
     val reference: WeakReference<Any>,
 )

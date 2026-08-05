@@ -17,8 +17,7 @@ import com.ariel.diagnostics.lifecycle.LifecycleDiagnostics
  * A ContentProvider is created after the Application object is constructed but before
  * Application.onCreate, the earliest a library can run code without the app's help.
  *
- * Only runs in the default process. An app with an android:process component should call the four
- * install() methods itself for those processes; each is idempotent.
+ * Only runs in the default process.
  */
 class DiagnosticsInitProvider : ContentProvider() {
 

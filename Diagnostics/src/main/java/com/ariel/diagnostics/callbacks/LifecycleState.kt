@@ -2,7 +2,6 @@ package com.ariel.diagnostics.callbacks
 
 /**
  * The lifecycle state one Activity or Fragment instance is in, as far as this feature has seen it.
- * Shared by both because their six callbacks have the same names and arrive in the same order.
  */
 enum class LifecycleState {
 

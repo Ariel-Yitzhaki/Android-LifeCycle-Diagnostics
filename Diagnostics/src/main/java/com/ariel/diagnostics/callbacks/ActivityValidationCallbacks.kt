@@ -38,7 +38,6 @@ class ActivityValidationCallbacks(
         )
     }
 
-    // The tracker counts these so it can check at the end that they balance against the onStops.
     override fun onActivityStarted(activity: Activity) {
         tracker.onEvent(
             activity,
@@ -49,7 +48,6 @@ class ActivityValidationCallbacks(
         )
     }
 
-    // Also the newest answer to which screen is in front.
     override fun onActivityResumed(activity: Activity) {
         strictModeWatcher.onActivityResumed(activity.javaClass.simpleName)
         tracker.onEvent(
@@ -74,8 +72,6 @@ class ActivityValidationCallbacks(
         )
     }
 
-    // Counted against the onStarts above; an Activity that dies with the two unequal has missed a
-    // callback or taken them out of order.
     override fun onActivityStopped(activity: Activity) {
         tracker.onEvent(
             activity,

@@ -4,9 +4,9 @@ import android.app.Application
 import android.os.Looper
 
 /**
- * Entry point for main-thread blocking detection: builds the pieces the feature is made of, starts
- * the one background thread it owns, attaches the printer that times main-thread messages, and
- * registers its own Activity callbacks with the framework.
+ * Entry point for main-thread blocking detection: starts the one background thread the feature
+ * owns, attaches the printer that times main-thread messages, and registers its own Activity
+ * callbacks with the framework.
  */
 object MainThreadBlocking {
 
@@ -15,9 +15,6 @@ object MainThreadBlocking {
     private var installed = false
 
     // Safe to call more than once; every call after the first does nothing.
-    //
-    // Belongs in debug builds only, more than the other three features: the printer attached below
-    // is called twice for every message the main thread runs.
     fun install(application: Application) {
         if (installed) {
             return

@@ -7,8 +7,6 @@ import java.util.WeakHashMap
  * does not follow the one before it, a component that died without ever reaching resumed,
  * unbalanced onStart/onStop counts, an Activity class that keeps being recreated, and a Fragment
  * whose view outlived its onDestroyView.
- *
- * Driven by ActivityValidationCallbacks and FragmentValidationCallbacks.
  */
 class TransitionTracker(
     private val logger: ValidationLogger,
@@ -72,8 +70,6 @@ class TransitionTracker(
         }
     }
 
-    // Views are counted rather than treated as a state, because the same Fragment can lose its view
-    // and be given a new one while on the back stack.
     fun onFragmentViewCreated(fragment: Any, name: String) {
         val record = recordFor(fragment, name, "Fragment", false)
         record.viewCreatedCount++
