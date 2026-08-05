@@ -118,7 +118,8 @@ class ActivityTimingCallbacks(
             firstSeen = seenScreens.isFirstTime(screenName),
             // Only ever true on the way out: Android sets it on the instance about to be replaced.
             configurationChange = activity.isChangingConfigurations,
-            approximate = false,
+            // Every Activity callback has a Pre/Post pair, so all six are the real thing.
+            kind = MeasurementKind.EXACT,
         )
         logger.log(timing)
     }

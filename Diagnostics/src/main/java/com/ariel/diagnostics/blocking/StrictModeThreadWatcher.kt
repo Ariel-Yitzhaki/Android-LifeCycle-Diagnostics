@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.StrictMode
 import android.os.strictmode.Violation
 import androidx.core.content.ContextCompat
+import com.ariel.diagnostics.StackSummary
 
 /**
  * Switches on the three StrictMode thread checks that catch work which should never happen on the
@@ -55,16 +56,17 @@ class StrictModeThreadWatcher(
     override fun onThreadViolation(violation: Violation) {
         val violationKind = violation.javaClass.simpleName
 
-        val message = violation.message
-        val details = if (message == null) {
-            "no details"
-        } else {
-            // Newlines are swapped for spaces so one finding stays one greppable Logcat line.
-            message.replace('\n', ' ')
-        }
+        // A Violation is a Throwable whose stack was filled in where the violation was detected, so
+        // it names the exact call that touched the disk or the network. getMessage() is null for
+        // every thread violation type, which is why the stack and not the message is printed here.
+        val origin = StackSummary.describeViolation(
+            violation,
+            BlockingConstants.VIOLATION_FRAMES_LOGGED,
+        )
 
         logger.report(
-            "StrictMode $violationKind on the main thread ${foregroundActivity.describe()}: $details",
+            "StrictMode $violationKind on the main thread ${foregroundActivity.describe()}, " +
+                "caused by: $origin",
         )
     }
 }

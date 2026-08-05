@@ -18,25 +18,42 @@ class TimingLogger {
     }
 
     private fun isSlow(timing: LifecycleTiming): Boolean {
+        // Time on screen is however long the user chose to look at it, so there is no duration that
+        // would count as too long.
+        if (timing.kind == MeasurementKind.TIME_ON_SCREEN) {
+            return false
+        }
+
         val thresholdNanos = DiagnosticsConstants.SLOW_CALLBACK_THRESHOLD_MS * DiagnosticsConstants.NANOS_PER_MILLI
         return timing.durationNanos > thresholdNanos
     }
 
     // Builds the printed line, for example:
     // SlowCreateActivity.onCreate took 412.35 ms  SLOW (over 50 ms)  [first time seen]
+    // HomeFeedFragment was on screen for 84797.41 ms
     private fun buildLine(timing: LifecycleTiming, slow: Boolean): String {
         val millis = timing.durationNanos.toDouble() / DiagnosticsConstants.NANOS_PER_MILLI
         // Locale.US so the decimal separator is always a dot.
         val duration = String.format(Locale.US, "%.2f ms", millis)
-        val approximateMark = if (timing.approximate) "~" else ""
 
         val line = StringBuilder()
         line.append(timing.screenName)
-        line.append(".")
-        line.append(timing.callbackName)
-        line.append(" took ")
-        line.append(approximateMark)
-        line.append(duration)
+
+        if (timing.kind == MeasurementKind.TIME_ON_SCREEN) {
+            // Deliberately not worded as a callback duration: naming onPause here would suggest the
+            // fragment spent this long inside it.
+            line.append(" was on screen for ")
+            line.append(duration)
+        } else {
+            line.append(".")
+            line.append(timing.callbackName)
+            line.append(" took ")
+            if (timing.kind == MeasurementKind.BETWEEN_CALLBACKS) {
+                line.append("~")
+            }
+            line.append(duration)
+        }
+
         if (slow) {
             line.append("  SLOW (over ")
             line.append(DiagnosticsConstants.SLOW_CALLBACK_THRESHOLD_MS)
@@ -48,8 +65,8 @@ class TimingLogger {
         if (timing.configurationChange) {
             line.append("  [configuration change]")
         }
-        if (timing.approximate) {
-            line.append("  [approx: measured between callbacks, not around one]")
+        if (timing.kind == MeasurementKind.BETWEEN_CALLBACKS) {
+            line.append("  [approx: gap since the previous callback, can include work from other components]")
         }
         return line.toString()
     }

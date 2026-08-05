@@ -21,6 +21,13 @@ object BlockingConstants {
     const val STACK_FRAMES_LOGGED = 8
 
     /**
+     * How many frames of a StrictMode violation's own stack are printed with a finding. A thread
+     * violation carries no message, so this stack is the only thing that says which call touched
+     * the disk or the network.
+     */
+    const val VIOLATION_FRAMES_LOGGED = 8
+
+    /**
      * A screen that dropped more than this percentage of its frames gets a finding when it stops.
      * Five per cent is roughly one dropped frame in twenty.
      */

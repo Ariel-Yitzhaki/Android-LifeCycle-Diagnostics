@@ -5,10 +5,16 @@ import android.os.HandlerThread
 import android.os.Looper
 import android.os.Process
 import android.os.SystemClock
+import com.ariel.diagnostics.StackSummary
 
 /**
  * Runs a countdown on a background thread for every message the main thread starts, and if a message
  * is still running when the countdown expires, captures what the main thread is doing and prints it.
+ *
+ * A message that trips the countdown is reported twice: once at the threshold, with the stack, and
+ * again when it finally ends, with the duration. The first line cannot carry a duration worth
+ * printing, because it is written at a fixed point in time and so would always report roughly the
+ * threshold no matter how long the message went on to run.
  */
 class SlowMessageWatchdog(
     private val logger: BlockingLogger,
@@ -34,6 +40,14 @@ class SlowMessageWatchdog(
     // because it is only ever compared for equality.
     @Volatile
     private var messageSequence = 0
+
+    // Sequence number of the last message a finding was printed for, so onMessageFinished knows
+    // which messages have a first line to follow up on and leaves every other message silent.
+    //
+    // Written on the background thread and read on the main thread. Zero means nothing has been
+    // reported yet, which no real message can be, since messageSequence is incremented before use.
+    @Volatile
+    private var reportedSequence = 0
 
     fun start() {
         val thread = HandlerThread("main-thread-watchdog", Process.THREAD_PRIORITY_BACKGROUND)
@@ -88,6 +102,31 @@ class SlowMessageWatchdog(
         // one belonging to this message may be part way through reportIfStillRunning() right now.
         // That is what the sequence number there is for.
         currentHandler.removeMessages(MSG_CHECK_SLOW_MESSAGE)
+
+        reportDurationIfReported()
+    }
+
+    // Runs on the main thread, straight after a message ends. Prints the second half of a finding:
+    // how long the message ran in total, which is the number the first line could not give.
+    private fun reportDurationIfReported() {
+        // Both fields read below are written only in onMessageStarted, on this same thread, so the
+        // next message cannot have moved them before this runs.
+        //
+        // The background thread may still be inside reportIfStillRunning() and not have set
+        // reportedSequence yet, in which case this message loses its follow-up line. Harmless: the
+        // first line has already been printed and carries the stack, which is the useful half.
+        if (reportedSequence != messageSequence) {
+            return
+        }
+
+        val totalMillis = SystemClock.uptimeMillis() - messageStartUptimeMillis
+
+        // Only ever reached for a message that already tripped the countdown, so this cannot add
+        // logging to the ordinary path, which runs thousands of times a minute.
+        logger.report(
+            "that message finished after $totalMillis ms in total " +
+                "${foregroundActivity.describe()}",
+        )
     }
 
     // Runs on the background thread. `sequence` is the number of the message this countdown was
@@ -97,55 +136,32 @@ class SlowMessageWatchdog(
             return
         }
 
-        // Read into a local first: the main thread could move on to the next message at any point
-        // below, and a duration worked out from two messages' clocks would be wrong.
-        val startedAt = messageStartUptimeMillis
-        val runningForMillis = SystemClock.uptimeMillis() - startedAt
-
         // Asking another thread for its stack briefly pauses it.
         val frames = mainThread.stackTrace
 
-        // Everything above was read while the main thread was free to move on, so the finding only
+        // The stack above was read while the main thread was free to move on, so the finding only
         // holds if the same message is still running now. The counter never goes backwards, so
-        // finding this message's number still on it here means it was there for the reads above
-        // too.
+        // finding this message's number still on it here means it was there for the read above too.
         if (!messageRunning || messageSequence != sequence) {
             return
         }
 
+        // Set before the line is printed, so the main thread cannot see the finding go out and then
+        // find no follow-up owed for it.
+        reportedSequence = sequence
+
+        // No duration here on purpose. This runs at a fixed delay after the message started, so any
+        // duration measured now would be the threshold plus scheduling jitter, and a 210 ms hiccup
+        // would be indistinguishable from a four second freeze. reportDurationIfReported() prints
+        // the real total once the message ends.
         logger.report(
-            "the main thread has been busy with one message for $runningForMillis ms " +
-                "(over the ${BlockingConstants.SLOW_MESSAGE_THRESHOLD_MS} ms limit) " +
-                "${foregroundActivity.describe()}. Main thread was in: ${describeStack(frames)} " +
+            "the main thread has been stuck on one message for over " +
+                "${BlockingConstants.SLOW_MESSAGE_THRESHOLD_MS} ms " +
+                "${foregroundActivity.describe()}. Main thread was in: " +
+                "${StackSummary.describe(frames, BlockingConstants.STACK_FRAMES_LOGGED)} " +
                 "(snapshot taken at the ${BlockingConstants.SLOW_MESSAGE_THRESHOLD_MS} ms mark, so " +
                 "it can show code that ran after the slow part)",
         )
-    }
-
-    private fun describeStack(frames: Array<StackTraceElement>): String {
-        if (frames.isEmpty()) {
-            // getStackTrace() hands back an empty array for a thread that is not running.
-            return "no stack available"
-        }
-
-        var limit = BlockingConstants.STACK_FRAMES_LOGGED
-        if (frames.size < limit) {
-            limit = frames.size
-        }
-
-        val line = StringBuilder()
-        for (index in 0 until limit) {
-            if (index > 0) {
-                line.append(" <- ")
-            }
-            line.append(frames[index].toString())
-        }
-        if (frames.size > limit) {
-            line.append(" <- ")
-            line.append(frames.size - limit)
-            line.append(" more frames")
-        }
-        return line.toString()
     }
 
     private companion object {

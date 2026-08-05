@@ -1,15 +1,15 @@
 package com.ariel.diagnostics.lifecycle
 
-/** One measurement: how long one lifecycle callback took on one screen. */
+/** One measurement taken at one lifecycle callback on one screen. */
 data class LifecycleTiming(
 
     /** Simple class name of the Activity or Fragment, for example "HomeActivity". */
     val screenName: String,
 
-    /** Which callback this measures, for example "onCreate". */
+    /** The callback this was measured at, for example "onCreate". */
     val callbackName: String,
 
-    /** How long the callback took, in nanoseconds. */
+    /** The measured duration in nanoseconds. See [kind] for what it is a duration of. */
     val durationNanos: Long,
 
     /** True when this is the first measurement recorded for this screen class in this process. */
@@ -19,8 +19,8 @@ data class LifecycleTiming(
     val configurationChange: Boolean,
 
     /**
-     * True when the duration is the gap between two consecutive callbacks rather than a real
-     * before/after pair around a single callback.
+     * What [durationNanos] is a duration of, which decides how the line is worded and whether the
+     * measurement can be called slow at all.
      */
-    val approximate: Boolean,
+    val kind: MeasurementKind,
 )

@@ -9,8 +9,9 @@ import androidx.fragment.app.FragmentManager
  * Times Fragment lifecycle callbacks, the same six as for Activities.
  *
  * Only onCreate has a real before/after pair. Every other callback fires after the fragment's own
- * code has run, so those measurements are the gap since the previous callback and are marked
- * approximate.
+ * code has run, so those measurements are the gap since the previous callback. See [MeasurementKind]
+ * for what each of those gaps actually contains, and note that the onResume to onPause gap is user
+ * idle time rather than work.
  */
 class FragmentTimingCallbacks(
     private val seenScreens: SeenScreens,
@@ -27,7 +28,7 @@ class FragmentTimingCallbacks(
 
     // The only fragment callback with a real "before" half, so the only exact measurement.
     override fun onFragmentCreated(fm: FragmentManager, f: Fragment, savedInstanceState: Bundle?) {
-        record(f, "onCreate", approximate = false)
+        record(f, "onCreate", MeasurementKind.EXACT)
     }
 
     // Not reported, since view creation is not one of the six measured callbacks, but the clock is
@@ -42,23 +43,29 @@ class FragmentTimingCallbacks(
     }
 
     override fun onFragmentStarted(fm: FragmentManager, f: Fragment) {
-        record(f, "onStart", approximate = true)
+        record(f, "onStart", MeasurementKind.BETWEEN_CALLBACKS)
     }
 
     override fun onFragmentResumed(fm: FragmentManager, f: Fragment) {
-        record(f, "onResume", approximate = true)
+        record(f, "onResume", MeasurementKind.BETWEEN_CALLBACKS)
     }
 
+    // The clock has been running since onResume, and nothing happens between a fragment resuming
+    // and pausing except the user looking at it. So this is time on screen, not the cost of
+    // onPause, and reporting it as a callback duration would flag every screen the user reads for
+    // more than a moment as slow.
     override fun onFragmentPaused(fm: FragmentManager, f: Fragment) {
-        record(f, "onPause", approximate = true)
+        record(f, "onPause", MeasurementKind.TIME_ON_SCREEN)
     }
 
     override fun onFragmentStopped(fm: FragmentManager, f: Fragment) {
-        record(f, "onStop", approximate = true)
+        record(f, "onStop", MeasurementKind.BETWEEN_CALLBACKS)
     }
 
+    // The gap here often spans the incoming fragment's onCreate and view inflation, because the
+    // framework interleaves one fragment's teardown with the next one's setup.
     override fun onFragmentDestroyed(fm: FragmentManager, f: Fragment) {
-        record(f, "onDestroy", approximate = true)
+        record(f, "onDestroy", MeasurementKind.BETWEEN_CALLBACKS)
         // Last callback this class handles for the fragment, so drop the clock record() restarted.
         startTimes.remove(f)
     }
@@ -70,7 +77,7 @@ class FragmentTimingCallbacks(
     // Prints one measurement for the fragment and restarts its clock. Does nothing but restart when
     // there is no start time, which happens when the library is installed part-way through a
     // fragment's lifecycle.
-    private fun record(fragment: Fragment, callbackName: String, approximate: Boolean) {
+    private fun record(fragment: Fragment, callbackName: String, kind: MeasurementKind) {
         val endNanos = System.nanoTime()
 
         val startNanos = startTimes[fragment]
@@ -91,7 +98,7 @@ class FragmentTimingCallbacks(
             durationNanos = endNanos - startNanos,
             firstSeen = seenScreens.isFirstTime(screenName),
             configurationChange = configurationChange,
-            approximate = approximate,
+            kind = kind,
         )
         logger.log(timing)
 

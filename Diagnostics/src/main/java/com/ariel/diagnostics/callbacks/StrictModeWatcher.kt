@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.StrictMode
 import android.os.strictmode.Violation
 import androidx.core.content.ContextCompat
+import com.ariel.diagnostics.StackSummary
 
 /**
  * Switches on the three StrictMode VM checks that catch things left behind: leaked registration
@@ -79,19 +80,19 @@ class StrictModeWatcher(private val logger: ValidationLogger) : StrictMode.OnVmV
             "the Activity in the foreground at the time was $foreground"
         }
 
-        val message = violation.message
-        val details = if (message == null) {
-            "no details"
-        } else {
-            // Newlines are swapped for spaces so one finding stays one greppable Logcat line.
-            message.replace('\n', ' ')
-        }
+        // A leaked receiver or closable carries the stack of the code that registered or allocated
+        // it, which names the leak far better than the foreground screen can. An Activity leak is
+        // only a count, so there this falls back to the detection stack and says little.
+        val origin = StackSummary.describeViolation(
+            violation,
+            ValidationConstants.VIOLATION_FRAMES_LOGGED,
+        )
 
         logger.report(
             "StrictMode $violationKind:",
-            "$details. Best guess at where this came from: $attribution (an Activity leak is " +
-                "usually noticed long after the code that caused it ran, so this may be the wrong " +
-                "screen)",
+            "came from: $origin. $attribution (this is noticed whenever the collector gets round " +
+                "to the object, usually long after the code that caused it ran, so the screen may " +
+                "be the wrong one)",
         )
     }
 }

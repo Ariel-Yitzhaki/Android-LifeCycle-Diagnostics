@@ -140,12 +140,25 @@ Tags on the line:
   which is usually the most expensive one because of class loading and inflation.
 - `[configuration change]` means the screen was being replaced by a rotation or similar, not by
   normal navigation.
-- `[approx: measured between callbacks, not around one]` appears on Fragment measurements. Only
-  `Fragment.onCreate` has a real before/after pair; the other five callbacks are reported as the gap
-  since the previous callback and are prefixed with `~`.
+- `[approx: gap since the previous callback, can include work from other components]` appears on
+  Fragment measurements, which are prefixed with `~`. Only `Fragment.onCreate` has a real
+  before/after pair; the rest are the gap since the previous callback. `onDestroy` is the least
+  trustworthy of them, because the framework interleaves one fragment's teardown with the next
+  one's setup, so the incoming fragment's inflation lands in the outgoing fragment's number.
 
 An Activity's `onCreate` measurement includes the `onCreate` of any fragments it restores, because
 that work happens inside `super.onCreate()`.
+
+A Fragment's `onPause` is not reported as a callback duration at all. The clock has been running
+since `onResume`, and nothing happens in between except the user looking at the screen, so that gap
+is time on screen rather than work. It gets its own wording and is never marked slow:
+
+```
+D/LifecycleDiagnostics: HomeFeedFragment was on screen for 84797.41 ms
+```
+
+Nothing is lost by this. A fragment's real `onPause` cost is inside that number either way, and at
+this scale it was never visible.
 
 ### 2. Callback validation
 
@@ -171,8 +184,14 @@ screen that was in the foreground at the time:
 
 ```
 D/CallbackValidation: StrictMode VM checks are on: leaked registration objects, leaked closable objects, Activity leaks
-W/CallbackValidation: StrictMode IntentReceiverLeakedViolation: ... best guess at where this came from: ...
+W/CallbackValidation: StrictMode IntentReceiverLeakedViolation: came from: com.example.app.HomeFragment.onStart(HomeFragment.kt:48) <- ... the Activity in the foreground at the time was MainActivity ...
 ```
+
+A VM violation is noticed whenever the collector gets round to the object, which can be long after
+the code that caused it ran, so the foreground screen is only a hint. The stack is the reliable
+half: a leaked receiver or closable carries the stack of the code that registered or allocated it,
+and that is what the finding prints. An Activity leak is a count with no origin to report, so there
+the stack says little.
 
 Components whose `onCreate` happened before the library was installed are excluded from the
 end-of-life checks, so the library never reports on its own blind spot.
@@ -203,17 +222,32 @@ fragment to its replacement.
 
 Three detectors, all reporting under the same tag.
 
-**Slow messages.** The library installs a `Printer` on the main `Looper`, which is called around
-every message the main thread runs. A countdown runs on a background thread, and if a message is
-still running after 200 ms the background thread captures the main thread's stack and prints the top
-8 frames:
+> **Debug builds only, and read emulator results with suspicion.** Installing a `Printer` on the
+> main `Looper` makes `Looper.loopOnce()` build a description of *every* main-thread message,
+> including `toString()` on the Handler and callback, before the `Printer` can ignore it. That cost
+> lands on the thread being measured. On an emulator or a debuggable build it stacks with an
+> emulated GPU, slower disk and unoptimised code, so the 200 ms threshold gets crossed by work that
+> would never approach it in release on real hardware. StrictMode violations are the exception —
+> they are detected per call, not per millisecond, so their count is the same everywhere.
+
+**Slow messages.** The `Printer` above is called around every message the main thread runs. A
+countdown runs on a background thread, and if a message is still running after 200 ms the background
+thread captures the main thread's stack and prints the top 8 frames. When that message eventually
+ends, a second line gives its real duration:
 
 ```
-W/MainThreadBlocking: the main thread has been busy with one message for 213 ms (over the 200 ms limit) with SlowCreateActivity in the foreground ...
+W/MainThreadBlocking: the main thread has been stuck on one message for over 200 ms with SlowCreateActivity in the foreground. Main thread was in: ...
+W/MainThreadBlocking: that message finished after 3421 ms in total with SlowCreateActivity in the foreground
 ```
 
-The stack is a snapshot taken at the 200 ms mark, not a recording, so it can show code that ran
-after the slow part.
+It takes two lines because the first one cannot know the answer. It is written at a fixed delay
+after the message started, so any duration measured there would be the threshold plus scheduling
+jitter — a 210 ms hiccup and a four second freeze would print the same number. The stack is a
+snapshot taken at the 200 ms mark, not a recording, so it can show code that ran after the slow
+part.
+
+Occasionally the second line is missing, when the message ends at the same moment the first line is
+being written. The stack is the useful half and it has already been printed.
 
 **Dropped frames.** JankStats counts the frames each Activity draws between `onStart` and `onStop`.
 When a visit ends having dropped more than 5 per cent of its frames, one line is printed:
@@ -222,13 +256,21 @@ When a visit ends having dropped more than 5 per cent of its frames, one line is
 W/MainThreadBlocking: 18.4% of JankListActivity's frames were dropped while it was on screen (37 of 201, over the 5.0% limit) ...
 ```
 
+Ignore these on an emulator. Frame timing there is measured against an emulated vsync, so the
+percentage does not describe anything a user would experience.
+
 **StrictMode thread violations.** Disk reads, disk writes and network on the main thread are caught
-at the moment they happen, and named together with the foreground screen:
+at the moment they happen. A thread violation carries no message of its own, so the finding names
+the call site instead, read off the violation's own stack with the StrictMode and BlockGuard frames
+trimmed from the top:
 
 ```
 D/MainThreadBlocking: StrictMode main-thread checks are on: disk reads, disk writes, network
-W/MainThreadBlocking: StrictMode DiskReadViolation on the main thread with MainThreadDiskReadActivity in the foreground: ...
+W/MainThreadBlocking: StrictMode DiskReadViolation on the main thread with MainActivity in the foreground, caused by: java.io.File.exists(File.java:815) <- android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:76) <- com.example.app.Settings.load(Settings.kt:22) <- 14 more frames
 ```
+
+These are the most portable findings the library produces. StrictMode fires on the call, not on how
+long it took, so ten main-thread disk reads on an emulator are ten on real hardware too.
 
 ## Tuning the thresholds
 
@@ -239,11 +281,13 @@ Every tunable value lives in one `object` per feature. Edit the constant and reb
 | `SLOW_CALLBACK_THRESHOLD_MS` | `lifecycle/DiagnosticsConstants.kt` | 50 |
 | `RECREATE_LIMIT` | `callbacks/ValidationConstants.kt` | 3 |
 | `RECREATE_WINDOW_MS` | `callbacks/ValidationConstants.kt` | 10000 |
+| `VIOLATION_FRAMES_LOGGED` | `callbacks/ValidationConstants.kt` | 8 |
 | `WATCH_DELAY_MS` | `leaks/LeakConstants.kt` | 5000 |
 | `GC_SETTLE_MS` | `leaks/LeakConstants.kt` | 100 |
 | `MIN_DESTROY_COUNT` | `leaks/LeakConstants.kt` | 3 |
 | `SLOW_MESSAGE_THRESHOLD_MS` | `blocking/BlockingConstants.kt` | 200 |
 | `STACK_FRAMES_LOGGED` | `blocking/BlockingConstants.kt` | 8 |
+| `VIOLATION_FRAMES_LOGGED` | `blocking/BlockingConstants.kt` | 8 |
 | `JANK_PERCENT_THRESHOLD` | `blocking/BlockingConstants.kt` | 5.0 |
 
 The Logcat tag each feature prints under is in the same file, as `LOG_TAG`.
@@ -369,7 +413,12 @@ force, so nothing the app asked for is switched off.
 - **Leaks are reported, not explained.** The library can tell you a screen is being held, but not by
   what. For the reference chain, reach for a heap dump.
 - **Fragment timings other than `onCreate` are approximate**, since the framework gives no before
-  half for them.
+  half for them. `onPause` cannot be measured at all and is reported as time on screen instead.
+- **A slow message's duration arrives on a second line**, once the message ends. The line that
+  carries the stack cannot carry a duration, because it is written at a fixed point in time.
+- **Main-thread blocking is a debug-build tool.** Timing main-thread messages makes the `Looper`
+  build a description of every one of them, so the feature slows down the thread it measures.
+  Results from an emulator overstate the problem; StrictMode violations are the exception.
 - **No API for reading findings programmatically.** Everything goes to Logcat.
 
 ## Project structure
