@@ -40,6 +40,8 @@ dependencies {
     implementation(libs.material)
     // Needed for FragmentManager.FragmentLifecycleCallbacks, which is how fragment timings are measured.
     implementation(libs.androidx.fragment.ktx)
+    // Needed for JankStats, which is how dropped frames are counted per screen in Feature 4.
+    implementation(libs.androidx.metrics.performance)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

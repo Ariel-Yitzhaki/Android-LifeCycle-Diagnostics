@@ -2,17 +2,13 @@ package com.ariel.diagnostics.callbacks
 
 /**
  * The lifecycle state one Activity or Fragment instance is in, as far as this feature has seen it.
- *
- * Activities and Fragments share this enum because the six callbacks that move them between states
- * have the same names and arrive in the same order for both.
+ * Shared by both because their six callbacks have the same names and arrive in the same order.
  */
 enum class LifecycleState {
 
     /**
-     * Nothing has been seen for this instance yet. A record starts here when the first callback we
-     * receive for a component is not its onCreate, which happens when the library is installed
-     * while the component is already part-way through its life. From this state every next state is
-     * accepted without complaint, because we genuinely do not know what came before.
+     * Nothing has been seen for this instance yet, because the first callback we received was not
+     * its onCreate. Every next state is accepted from here without complaint.
      */
     UNKNOWN,
 

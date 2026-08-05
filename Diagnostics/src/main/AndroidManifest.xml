@@ -5,7 +5,7 @@
 
         <!--
             Merged into the manifest of every app that depends on this library, which is what makes
-            the three features start with no code in the app. See DiagnosticsInitProvider.
+            the four features start with no code in the app. See DiagnosticsInitProvider.
 
             android:authorities has to be unique across every app installed on the device, so it is
             built from ${applicationId}, which the build tools replace with the consuming app's own

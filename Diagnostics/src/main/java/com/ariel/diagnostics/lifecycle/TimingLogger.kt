@@ -4,20 +4,15 @@ import android.util.Log
 import java.util.Locale
 
 /**
- * Decides whether a measurement is slow and prints it to Logcat as one human-readable line.
- *
- * This is the only class in the feature that touches Log, so changing the output format — or
- * sending measurements somewhere other than Logcat later — means changing this file only.
+ * Decides whether a measurement is slow and prints it to Logcat as one human-readable line. The
+ * only class in this feature that touches Log.
  */
 class TimingLogger {
 
-    /** Prints one line for [timing]. */
+    // Prints one line for the timing: warn level when it is slow, debug otherwise.
     fun log(timing: LifecycleTiming) {
         val slow = isSlow(timing)
         val line = buildLine(timing, slow)
-        // Slow callbacks go out at warn level so they stand out in Logcat and can be filtered on
-        // their own; everything else stays at debug so the normal timings are there when I want
-        // them without drowning the log.
         if (slow) {
             Log.w(DiagnosticsConstants.LOG_TAG, line)
         } else {
@@ -25,25 +20,18 @@ class TimingLogger {
         }
     }
 
+    // Returns true when the timing is over the slow-callback threshold.
     private fun isSlow(timing: LifecycleTiming): Boolean {
-        // Compared in nanoseconds rather than converting the duration to milliseconds first: whole
-        // numbers, no rounding, and nothing sitting exactly on the threshold by accident.
         val thresholdNanos = DiagnosticsConstants.SLOW_CALLBACK_THRESHOLD_MS * DiagnosticsConstants.NANOS_PER_MILLI
         return timing.durationNanos > thresholdNanos
     }
 
-    /**
-     * Builds the printed line, for example:
-     *
-     * `SlowCreateActivity.onCreate took 412.35 ms  SLOW (over 50 ms)  [first time seen]`
-     */
+    // Builds the printed line, for example:
+    // SlowCreateActivity.onCreate took 412.35 ms  SLOW (over 50 ms)  [first time seen]
     private fun buildLine(timing: LifecycleTiming, slow: Boolean): String {
         val millis = timing.durationNanos.toDouble() / DiagnosticsConstants.NANOS_PER_MILLI
-        // Locale.US so the decimal separator is always a dot. On a device set to, say, German the
-        // default locale would print "412,35" and make the lines annoying to read and to grep.
+        // Locale.US so the decimal separator is always a dot and the lines stay greppable.
         val duration = String.format(Locale.US, "%.2f ms", millis)
-        // A leading "~" is the short signal that the number is a gap and not an exact measurement.
-        // The line also spells that out at the end, so it reads correctly without knowing the "~".
         val approximateMark = if (timing.approximate) "~" else ""
 
         val line = StringBuilder()

@@ -12,6 +12,7 @@ activity = "1.12.4"
 fragment = "1.8.9"
 recyclerview = "1.4.0"
 lifecycle = "2.9.4"
+metricsPerformance = "1.0.0"
 composeBom = "2025.11.01"
 navigationCompose = "2.9.8"
 
@@ -22,6 +23,7 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+androidx-metrics-performance = { group = "androidx.metrics", name = "metrics-performance", version.ref = "metricsPerformance" }
 
 # sample-views
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activity" }
