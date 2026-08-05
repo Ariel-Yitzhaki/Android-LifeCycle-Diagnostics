@@ -4,15 +4,14 @@ import android.app.Application
 
 /**
  * Entry point for callback validation: builds the pieces the feature is made of and registers its
- * own Activity callbacks with the framework, separately from the other features'.
+ * own Activity callbacks with the framework.
  */
 object CallbackValidation {
 
-    // Guards against a second registration, which would report every finding twice. Only touched
-    // from Application.onCreate on the main thread, so it needs no locking.
+    // Guards against a second registration, which would report every finding twice.
     private var installed = false
 
-    // Starts validating. Safe to call more than once; every call after the first does nothing.
+    // Safe to call more than once; every call after the first does nothing.
     fun install(application: Application) {
         if (installed) {
             return

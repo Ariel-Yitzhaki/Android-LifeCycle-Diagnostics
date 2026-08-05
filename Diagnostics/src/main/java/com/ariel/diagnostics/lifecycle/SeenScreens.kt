@@ -6,8 +6,8 @@ package com.ariel.diagnostics.lifecycle
  */
 class SeenScreens {
 
-    // Class names only: this set lives as long as the process, so holding a screen object here
-    // would keep it and its whole view tree in memory for the rest of the session.
+    // Class names only: this set lives as long as the process, so a screen object here would keep
+    // it and its whole view tree in memory for the rest of the session.
     private val seen = HashSet<String>()
 
     // Returns true the first time it is called with a given name and false every time after.

@@ -16,9 +16,9 @@ class ActivityValidationCallbacks(
     private val fragmentCallbacks: FragmentValidationCallbacks,
 ) : Application.ActivityLifecycleCallbacks {
 
-    // Runs immediately before an Activity's own onCreate — after the app's Application.onCreate has
-    // finished but before any screen exists, which is the only moment both the StrictMode policy and
-    // the fragment callbacks can be installed. See StrictModeWatcher.installIfNeeded.
+    // Runs after the app's Application.onCreate has finished but before any screen exists, the only
+    // moment both the StrictMode policy and the fragment callbacks can be installed. See
+    // StrictModeWatcher.installIfNeeded.
     override fun onActivityPreCreated(activity: Activity, savedInstanceState: Bundle?) {
         strictModeWatcher.installIfNeeded(activity)
 
@@ -38,8 +38,7 @@ class ActivityValidationCallbacks(
         )
     }
 
-    // Runs after an Activity's own onStart. The tracker counts these so it can check at the end that
-    // they balance against the onStops.
+    // The tracker counts these so it can check at the end that they balance against the onStops.
     override fun onActivityStarted(activity: Activity) {
         tracker.onEvent(
             activity,
@@ -50,7 +49,7 @@ class ActivityValidationCallbacks(
         )
     }
 
-    // Runs after an Activity's own onResume, also the newest answer to which screen is in front.
+    // Also the newest answer to which screen is in front.
     override fun onActivityResumed(activity: Activity) {
         strictModeWatcher.onActivityResumed(activity.javaClass.simpleName)
         tracker.onEvent(
@@ -62,8 +61,8 @@ class ActivityValidationCallbacks(
         )
     }
 
-    // Runs after an Activity's own onPause, always before the next Activity is resumed, so clearing
-    // the foreground name here cannot wipe out a newer one.
+    // Always runs before the next Activity is resumed, so clearing the foreground name here cannot
+    // wipe out a newer one.
     override fun onActivityPaused(activity: Activity) {
         strictModeWatcher.onActivityPaused()
         tracker.onEvent(
@@ -75,8 +74,8 @@ class ActivityValidationCallbacks(
         )
     }
 
-    // Runs after an Activity's own onStop. Counted against the onStarts above; an Activity that dies
-    // with the two unequal has missed a callback or taken them out of order.
+    // Counted against the onStarts above; an Activity that dies with the two unequal has missed a
+    // callback or taken them out of order.
     override fun onActivityStopped(activity: Activity) {
         tracker.onEvent(
             activity,
@@ -101,7 +100,6 @@ class ActivityValidationCallbacks(
         }
     }
 
-    // Saving state is not a lifecycle step and does not change which state the Activity is in, but
-    // the interface has no default implementation for it.
+    // Not a lifecycle step, but the interface has no default implementation for it.
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
 }

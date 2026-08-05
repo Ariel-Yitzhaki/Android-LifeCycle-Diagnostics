@@ -3,26 +3,25 @@ package com.ariel.diagnostics.callbacks
 import android.os.SystemClock
 
 /**
- * Watches for one Activity class being destroyed and recreated repeatedly in a short time — a
- * restart loop, a redirect that bounces back, a finish() in the wrong place. Configuration changes
- * are excluded, since they destroy and recreate an Activity by design.
+ * Watches for one Activity class being destroyed and recreated repeatedly in a short time, which
+ * points at a restart loop. Configuration changes are excluded, since they destroy and recreate an
+ * Activity by design.
  */
 class RecreateWatcher(private val logger: ValidationLogger) {
 
     // Keyed by class name and never by an Activity object: this map lives as long as the process,
-    // so holding an Activity here would be the very leak the feature looks for. The number of
-    // Activity classes in an app is small and fixed, so it cannot grow without bound.
+    // so an Activity here would be the very leak the feature looks for.
     private val destroyTimes = HashMap<String, MutableList<Long>>()
 
-    // Records that one instance of the class was destroyed, and reports thrash if too many have been
-    // destroyed inside the recent window. configurationChange excludes rotations and similar.
+    // Records that one instance of the class was destroyed, and reports thrash if too many have
+    // been destroyed inside the recent window.
     fun onActivityDestroyed(activityName: String, configurationChange: Boolean) {
         if (configurationChange) {
             return
         }
 
         // elapsedRealtime() never jumps backwards, unlike currentTimeMillis(), which moves when the
-        // clock is corrected and could make a ten-second window look like an hour.
+        // clock is corrected.
         val now = SystemClock.elapsedRealtime()
 
         var times = destroyTimes[activityName]
@@ -44,7 +43,7 @@ class RecreateWatcher(private val logger: ValidationLogger) {
                 activityName,
                 "was destroyed and recreated ${times.size} times in the last " +
                     "${ValidationConstants.RECREATE_WINDOW_MS / 1000} seconds, not counting " +
-                    "configuration changes — this looks like a restart loop",
+                    "configuration changes. This looks like a restart loop",
             )
             // Cleared so the next report needs a fresh burst rather than firing on every destroy
             // while the old timestamps stay inside the window.

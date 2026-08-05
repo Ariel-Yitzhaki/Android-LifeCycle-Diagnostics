@@ -372,11 +372,6 @@ force, so nothing the app asked for is switched off.
   half for them.
 - **No API for reading findings programmatically.** Everything goes to Logcat.
 
-Known rough edges are marked with `TODO` in the source, including batching the leak checks into one
-collection, giving each main-thread message an id so a message finishing on the threshold cannot be
-reported, ignoring jank on visits that drew very few frames, and merging the two StrictMode watchers
-into one class.
-
 ## Project structure
 
 ```

@@ -8,13 +8,13 @@ object BlockingConstants {
 
     /**
      * One main-thread message still running after this many milliseconds is reported as blocking.
-     * Well above ordinary work — a message is meant to finish inside a 16 ms frame — and well below
-     * the system's own 5 second "Application Not Responding" limit.
+     * Well above ordinary work, since a message is meant to finish inside a 16 ms frame, and well
+     * below the system's own 5 second "Application Not Responding" limit.
      */
     const val SLOW_MESSAGE_THRESHOLD_MS = 200L
 
     /**
-     * How many lines of the captured main-thread stack are printed with a finding. The top of the
+     * How many frames of the captured main-thread stack are printed with a finding. The top of the
      * stack says what is running right now; a full Android stack is around sixty frames of mostly
      * framework plumbing.
      */

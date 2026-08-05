@@ -15,19 +15,19 @@ class BlockingActivityCallbacks(
     private val foregroundActivity: ForegroundActivityTracker,
 ) : Application.ActivityLifecycleCallbacks {
 
-    // Runs immediately before an Activity's own onCreate — after the app's Application.onCreate has
-    // finished but before any screen exists, which is the only moment the StrictMode thread policy
-    // can be installed. See StrictModeThreadWatcher.installIfNeeded.
+    // Runs after the app's Application.onCreate has finished but before any screen exists, the only
+    // moment the StrictMode thread policy can be installed. See
+    // StrictModeThreadWatcher.installIfNeeded.
     override fun onActivityPreCreated(activity: Activity, savedInstanceState: Bundle?) {
         strictModeThreadWatcher.installIfNeeded(activity)
     }
 
-    // Runs after an Activity's own onStart, the point from which it starts drawing frames.
+    // onStart is the point from which an Activity starts drawing frames.
     override fun onActivityStarted(activity: Activity) {
         jankTracker.startTracking(activity)
     }
 
-    // Runs after an Activity's own onResume, the newest answer to which screen the user is on.
+    // The newest answer to which screen the user is on.
     override fun onActivityResumed(activity: Activity) {
         foregroundActivity.onActivityResumed(activity.javaClass.simpleName)
     }
@@ -36,14 +36,12 @@ class BlockingActivityCallbacks(
         foregroundActivity.onActivityPaused()
     }
 
-    // Runs after an Activity's own onStop, the end of a visit and so the moment frame counts are
-    // final.
+    // onStop ends a visit, so this is the moment the frame counts are final.
     override fun onActivityStopped(activity: Activity) {
         jankTracker.stopTracking(activity)
     }
 
-    // Nothing this feature measures starts or ends at these moments, but they have no default
-    // implementation.
+    // Not needed by this feature, but the three callbacks below have no default implementation.
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
 

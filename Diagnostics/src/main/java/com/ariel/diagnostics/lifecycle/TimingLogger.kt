@@ -3,13 +3,10 @@ package com.ariel.diagnostics.lifecycle
 import android.util.Log
 import java.util.Locale
 
-/**
- * Decides whether a measurement is slow and prints it to Logcat as one human-readable line. The
- * only class in this feature that touches Log.
- */
+/** Decides whether a measurement is slow and prints it to Logcat as one line. */
 class TimingLogger {
 
-    // Prints one line for the timing: warn level when it is slow, debug otherwise.
+    // Warn level when the timing is slow, debug otherwise.
     fun log(timing: LifecycleTiming) {
         val slow = isSlow(timing)
         val line = buildLine(timing, slow)
@@ -20,7 +17,6 @@ class TimingLogger {
         }
     }
 
-    // Returns true when the timing is over the slow-callback threshold.
     private fun isSlow(timing: LifecycleTiming): Boolean {
         val thresholdNanos = DiagnosticsConstants.SLOW_CALLBACK_THRESHOLD_MS * DiagnosticsConstants.NANOS_PER_MILLI
         return timing.durationNanos > thresholdNanos
@@ -30,7 +26,7 @@ class TimingLogger {
     // SlowCreateActivity.onCreate took 412.35 ms  SLOW (over 50 ms)  [first time seen]
     private fun buildLine(timing: LifecycleTiming, slow: Boolean): String {
         val millis = timing.durationNanos.toDouble() / DiagnosticsConstants.NANOS_PER_MILLI
-        // Locale.US so the decimal separator is always a dot and the lines stay greppable.
+        // Locale.US so the decimal separator is always a dot.
         val duration = String.format(Locale.US, "%.2f ms", millis)
         val approximateMark = if (timing.approximate) "~" else ""
 

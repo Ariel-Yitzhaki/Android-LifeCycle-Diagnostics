@@ -18,15 +18,15 @@ class ScreenJankRecord(
     /**
      * The JankStats object delivering frames into these counts. Null only between this record being
      * created and that object existing, because the frame listener has to be able to reach this
-     * record — see JankTracker.startTracking.
+     * record. See JankTracker.startTracking.
      */
     var jankStats: JankStats? = null
 
     /**
      * How many frames this screen has drawn during this visit.
      *
-     * @Volatile because frames are counted on JankStats' background thread while the totals are read
-     * on the main thread when the screen stops.
+     * @Volatile because frames are counted on JankStats' background thread while the totals are
+     * read on the main thread when the screen stops.
      */
     @Volatile
     var totalFrames = 0
@@ -35,8 +35,7 @@ class ScreenJankRecord(
     @Volatile
     var jankyFrames = 0
 
-    // Works out what share of this screen's frames were janky, as a percentage. The caller must
-    // check that at least one frame was drawn.
+    // The caller must check that at least one frame was drawn.
     fun jankPercent(): Double {
         // toDouble() keeps the result a fraction; two Ints divided in Kotlin give an Int.
         return jankyFrames.toDouble() * 100.0 / totalFrames

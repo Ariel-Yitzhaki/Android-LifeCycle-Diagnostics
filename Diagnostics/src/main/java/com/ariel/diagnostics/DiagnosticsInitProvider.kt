@@ -11,17 +11,14 @@ import com.ariel.diagnostics.leaks.LeakDetection
 import com.ariel.diagnostics.lifecycle.LifecycleDiagnostics
 
 /**
- * Turns all four features on with no code in the app at all. Declared in the library's own manifest,
- * which is merged into every app that depends on the library.
+ * Turns all four features on with no code in the app. Declared in the library's own manifest, which
+ * is merged into every app that depends on the library.
  *
- * A ContentProvider is used because of when the framework creates one: after the Application object
- * is constructed but before Application.onCreate, which is the earliest a library can run code
- * without the app's help and before any Activity can exist.
+ * A ContentProvider is created after the Application object is constructed but before
+ * Application.onCreate, the earliest a library can run code without the app's help.
  *
- * Two deliberate limits. It only runs in the default process, so an app with an android:process
- * component should call the four install() methods itself for those processes — each is idempotent.
- * And it offers no way to pick which features run; an app that wants that can drop this provider
- * with `tools:node="remove"` in its own manifest and call install() by hand.
+ * Only runs in the default process. An app with an android:process component should call the four
+ * install() methods itself for those processes; each is idempotent.
  */
 class DiagnosticsInitProvider : ContentProvider() {
 
@@ -35,7 +32,7 @@ class DiagnosticsInitProvider : ContentProvider() {
         return true
     }
 
-    // The methods below are abstract on ContentProvider but are never called for this provider.
+    // Abstract on ContentProvider, but never called for this provider.
 
     override fun query(
         uri: Uri,

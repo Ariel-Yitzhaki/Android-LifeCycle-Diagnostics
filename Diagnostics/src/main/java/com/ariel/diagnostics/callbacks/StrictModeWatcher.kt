@@ -6,31 +6,31 @@ import android.os.strictmode.Violation
 import androidx.core.content.ContextCompat
 
 /**
- * Switches on the three StrictMode VM checks that catch things being left behind — leaked
- * registration objects, leaked closable objects and leaked Activities — and receives the violations
- * inside the app through penaltyListener instead of only in the system log.
+ * Switches on the three StrictMode VM checks that catch things left behind: leaked registration
+ * objects, leaked closable objects and leaked Activities. Violations are received inside the app
+ * through penaltyListener instead of only in the system log.
  */
 class StrictModeWatcher(private val logger: ValidationLogger) : StrictMode.OnVmViolationListener {
 
     private var installed = false
 
-    // A name and never an Activity object: this field lives as long as the process, so holding an
-    // Activity here would leak exactly what detectActivityLeaks() below looks for.
+    // A name and never an Activity object: this field lives as long as the process, so an Activity
+    // here would leak exactly what detectActivityLeaks() below looks for.
     private var foregroundActivityName: String? = null
 
     // Builds the StrictMode policy and installs it, the first time it is called.
     //
-    // Must run from onActivityPreCreated rather than from the library's install(): apps often call
+    // Must run from onActivityPreCreated and not from the library's install(): apps often call
     // setVmPolicy() in Application.onCreate, and setVmPolicy replaces the whole policy, so a policy
-    // installed any earlier would be thrown away by the app's own line.
+    // installed any earlier would be thrown away.
     fun installIfNeeded(activity: Activity) {
         if (installed) {
             return
         }
         installed = true
 
-        // Seeding the Builder with the policy in force copies across whatever the app switched on
-        // for itself; a plain Builder() would silently switch off every check the app asked for.
+        // Seeding the Builder with the policy in force keeps whatever the app switched on for
+        // itself; a plain Builder() would silently switch off every check the app asked for.
         val existingPolicy = StrictMode.getVmPolicy()
         val builder = StrictMode.VmPolicy.Builder(existingPolicy)
 
@@ -42,9 +42,8 @@ class StrictModeWatcher(private val logger: ValidationLogger) : StrictMode.OnVmV
         // Fires when more instances of an Activity class are alive than there should be.
         builder.detectActivityLeaks()
 
-        // A policy holds a single listener, so this replaces one the app may have set. The main
-        // thread is used because the foreground name below is written from lifecycle callbacks, and
-        // the application context is passed so this long-lived policy cannot hold an Activity.
+        // A policy holds a single listener, so this replaces one the app may have set. The
+        // application context is used so this long-lived policy cannot hold an Activity.
         val mainThreadExecutor = ContextCompat.getMainExecutor(activity.applicationContext)
         builder.penaltyListener(mainThreadExecutor, this)
 
@@ -56,21 +55,20 @@ class StrictModeWatcher(private val logger: ValidationLogger) : StrictMode.OnVmV
         )
     }
 
-    // Remembers which Activity is in the foreground. Called from onActivityResumed.
+    // Called from onActivityResumed.
     fun onActivityResumed(activityName: String) {
         foregroundActivityName = activityName
     }
 
-    // Forgets the foreground Activity. Called from onActivityPaused, which Android always runs
-    // before resuming the incoming Activity, so this cannot wipe out a newer name.
+    // Called from onActivityPaused, which Android always runs before resuming the incoming
+    // Activity, so this cannot wipe out a newer name.
     fun onActivityPaused() {
         foregroundActivityName = null
     }
 
     // Prints one StrictMode violation together with the Activity in the foreground at the time.
-    //
-    // That name is a best guess: a leak is only noticed when the collector gets round to the object,
-    // which can be long after the code that leaked it ran.
+    // That name is a best guess: a leak is only noticed when the collector gets round to the
+    // object, which can be long after the code that leaked it ran.
     override fun onVmViolation(violation: Violation) {
         val violationKind = violation.javaClass.simpleName
 
@@ -92,7 +90,7 @@ class StrictModeWatcher(private val logger: ValidationLogger) : StrictMode.OnVmV
 
         logger.report(
             "StrictMode $violationKind:",
-            "$details — best guess at where this came from: $attribution (an Activity leak is " +
+            "$details. Best guess at where this came from: $attribution (an Activity leak is " +
                 "usually noticed long after the code that caused it ran, so this may be the wrong " +
                 "screen)",
         )

@@ -4,31 +4,27 @@ import java.util.WeakHashMap
 
 /**
  * Keeps the current lifecycle state of every live Activity and Fragment, and reports any step that
- * does not follow the one before it, a component that died without ever reaching resumed, unbalanced
- * onStart/onStop counts, an Activity class that keeps being recreated, and a Fragment whose view
- * outlived its onDestroyView.
+ * does not follow the one before it, a component that died without ever reaching resumed,
+ * unbalanced onStart/onStop counts, an Activity class that keeps being recreated, and a Fragment
+ * whose view outlived its onDestroyView.
  *
- * Driven entirely by ActivityValidationCallbacks and FragmentValidationCallbacks.
+ * Driven by ActivityValidationCallbacks and FragmentValidationCallbacks.
  */
 class TransitionTracker(
     private val logger: ValidationLogger,
     private val recreateWatcher: RecreateWatcher,
 ) {
 
-    // Keyed by the component itself, which any Java map compares by identity since neither Activity
-    // nor Fragment overrides equals/hashCode.
+    // Keyed by the component itself, compared by identity since neither Activity nor Fragment
+    // overrides equals/hashCode. Weak keys because this map lives as long as the process, which is
+    // safe only because ComponentRecord never points back at its own key.
     //
-    // A WeakHashMap and not a HashMap: this map lives as long as the process, so a strong key would
-    // keep every component ever created alive. That works only because ComponentRecord never points
-    // back at its own key.
-    //
-    // Entries are deliberately not removed at onDestroy, so a callback arriving afterwards still
-    // finds the record and can be reported instead of quietly starting a fresh one.
+    // Entries are not removed at onDestroy, so a callback arriving afterwards still finds the record
+    // and can be reported instead of quietly starting a fresh one.
     private val records = WeakHashMap<Any, ComponentRecord>()
 
-    // Records one ordinary lifecycle callback for one component and reports it if it does not follow
-    // on from the state the component was already in. next is the state callbackName puts the
-    // component into.
+    // Records one ordinary lifecycle callback and reports it if it does not follow on from the
+    // state the component was already in. next is the state callbackName puts the component into.
     //
     // onDestroy is not handled here; it has end-of-life checks of its own below.
     fun onEvent(
@@ -50,7 +46,6 @@ class TransitionTracker(
     }
 
     // Records that an Activity was destroyed and runs every end-of-life check on it.
-    // configurationChange comes from the Activity's own isChangingConfigurations.
     fun onActivityDestroyed(activity: Any, name: String, configurationChange: Boolean) {
         val record = recordFor(activity, name, "Activity", false)
         moveTo(record, LifecycleState.DESTROYED, "onDestroy")
@@ -71,20 +66,20 @@ class TransitionTracker(
             logger.report(
                 record.label(),
                 "was destroyed with ${record.viewCreatedCount} view(s) created but only " +
-                    "${record.viewDestroyedCount} destroyed — onDestroyView never arrived for the " +
+                    "${record.viewDestroyedCount} destroyed. onDestroyView never arrived for the " +
                     "last one, so anything that view still points at stays in memory",
             )
         }
     }
 
-    // Notes that a Fragment just got a view. Views are counted rather than treated as a state,
-    // because the same Fragment can lose its view and be given a new one while on the back stack.
+    // Views are counted rather than treated as a state, because the same Fragment can lose its view
+    // and be given a new one while on the back stack.
     fun onFragmentViewCreated(fragment: Any, name: String) {
         val record = recordFor(fragment, name, "Fragment", false)
         record.viewCreatedCount++
     }
 
-    // Notes that a Fragment's view was torn down. Compared against the created count on destroy.
+    // Compared against the created count on destroy.
     fun onFragmentViewDestroyed(fragment: Any, name: String) {
         val record = recordFor(fragment, name, "Fragment", false)
         record.viewDestroyedCount++
@@ -103,8 +98,7 @@ class TransitionTracker(
             return existing
         }
 
-        // identityHashCode is enough to tell instances apart in the log, and reading it does not
-        // keep the object alive.
+        // identityHashCode tells instances apart in the log without keeping the object alive.
         val instanceId = Integer.toHexString(System.identityHashCode(instance))
 
         val fresh = ComponentRecord(name, kind, instanceId, fromCreateCallback)
@@ -114,7 +108,7 @@ class TransitionTracker(
 
     // Decides whether the step from the component's current state to next is one the lifecycle
     // actually takes, reports it if it is not, and stores the new state. The only place
-    // ComponentRecord.state is ever written.
+    // ComponentRecord.state is written.
     private fun moveTo(record: ComponentRecord, next: LifecycleState, callbackName: String) {
         val expected = when (record.state) {
             LifecycleState.UNKNOWN -> true
@@ -135,13 +129,13 @@ class TransitionTracker(
         if (!expected) {
             logger.report(
                 record.label(),
-                "received $callbackName while it was ${record.state} — the lifecycle does not " +
+                "received $callbackName while it was ${record.state}. The lifecycle does not " +
                     "normally take that step",
             )
         }
 
-        // Written even when the step was unexpected, so one odd callback produces one finding rather
-        // than making every callback after it look wrong too.
+        // Written even when the step was unexpected, so one odd callback produces one finding
+        // rather than making every callback after it look wrong too.
         record.state = next
     }
 
@@ -149,8 +143,8 @@ class TransitionTracker(
     // reach the foreground, and did its starts and stops balance.
     private fun reportEndOfLife(record: ComponentRecord) {
         if (!record.sawCreate) {
-            // The library was installed after this component's onCreate, so reporting on it would be
-            // reporting our own blind spot.
+            // The library was installed after this component's onCreate, so its counts are missing
+            // their first half.
             return
         }
 
@@ -162,7 +156,7 @@ class TransitionTracker(
             logger.report(
                 record.label(),
                 "was destroyed with ${record.startCount} onStart(s) against " +
-                    "${record.stopCount} onStop(s) — the two should always balance, so a callback " +
+                    "${record.stopCount} onStop(s). The two should always balance, so a callback " +
                     "was missed or arrived out of order",
             )
         }

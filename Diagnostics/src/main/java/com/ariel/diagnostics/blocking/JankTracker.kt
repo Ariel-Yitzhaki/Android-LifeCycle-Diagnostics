@@ -17,11 +17,11 @@ class JankTracker(private val logger: BlockingLogger) {
     // stopTracking(), and the framework always calls onStop before onDestroy.
     //
     // No locking: both functions that touch this map are lifecycle callbacks on the main thread,
-    // which is why the frame counting below deliberately does not come through here.
+    // which is why the frame counting below does not come through here.
     private val records = HashMap<Activity, ScreenJankRecord>()
 
-    // Starts counting frames for one Activity. Counting starts at onStart rather than onCreate
-    // because frames only exist while a screen is visible, and restarts from zero on every visit.
+    // Counting starts at onStart rather than onCreate because frames only exist while a screen is
+    // visible, and restarts from zero on every visit.
     fun startTracking(activity: Activity) {
         if (records.containsKey(activity)) {
             // Should not happen, since onStart and onStop alternate, but a second JankStats on the
@@ -37,10 +37,8 @@ class JankTracker(private val logger: BlockingLogger) {
 
         val record = ScreenJankRecord(activity.javaClass.simpleName)
 
-        // Two things about this listener are easy to get wrong: from Android 7 onwards it does not
-        // run on the main thread, which is why the counters it touches are @Volatile and why it does
-        // not go near the map above; and the FrameData it is given is reused on the next frame, so
-        // anything needed from it has to be copied out before the listener returns.
+        // From Android 7 onwards this listener does not run on the main thread, which is why the
+        // counters it touches are @Volatile and why it does not go near the map above.
         val jankStats = JankStats.createAndTrack(activity.window) { frameData ->
             val janky = frameData.isJank
             record.totalFrames++
@@ -55,7 +53,7 @@ class JankTracker(private val logger: BlockingLogger) {
         records[activity] = record
     }
 
-    // Stops counting frames for one Activity and prints a finding if it dropped too many of them.
+    // Prints a finding if the Activity dropped too many frames during this visit.
     fun stopTracking(activity: Activity) {
         val record = records.remove(activity)
         if (record == null) {
@@ -72,11 +70,7 @@ class JankTracker(private val logger: BlockingLogger) {
         reportIfJanky(record)
     }
 
-    // Prints a finding for the record if this visit dropped more than the allowed share of frames.
     // One line per visit, never per frame.
-    //
-    // TODO: ignore visits below some number of frames — a screen that drew ten frames crosses the
-    //  threshold on a single late one.
     private fun reportIfJanky(record: ScreenJankRecord) {
         if (record.totalFrames == 0) {
             return
@@ -87,13 +81,13 @@ class JankTracker(private val logger: BlockingLogger) {
             return
         }
 
-        // Locale.US so the decimal separator is always a dot and the lines stay greppable.
+        // Locale.US so the decimal separator is always a dot.
         val percentText = String.format(Locale.US, "%.1f", jankPercent)
 
         logger.report(
             "$percentText% of ${record.activityName}'s frames were dropped while it was on screen " +
                 "(${record.jankyFrames} of ${record.totalFrames}, over the " +
-                "${BlockingConstants.JANK_PERCENT_THRESHOLD}% limit) — a dropped frame is one that " +
+                "${BlockingConstants.JANK_PERCENT_THRESHOLD}% limit). A dropped frame is one that " +
                 "took more than twice as long as this device's frame budget allows",
         )
     }

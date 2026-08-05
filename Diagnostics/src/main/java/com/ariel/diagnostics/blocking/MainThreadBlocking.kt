@@ -11,11 +11,10 @@ import android.os.Looper
 object MainThreadBlocking {
 
     // Guards against a second printer and a second registration, which would report everything
-    // twice. Only touched from Application.onCreate on the main thread, so it needs no locking.
+    // twice.
     private var installed = false
 
-    // Starts watching the main thread. Safe to call more than once; every call after the first does
-    // nothing.
+    // Safe to call more than once; every call after the first does nothing.
     //
     // Belongs in debug builds only, more than the other three features: the printer attached below
     // is called twice for every message the main thread runs.
@@ -39,13 +38,12 @@ object MainThreadBlocking {
         watchdog.start()
 
         // A Looper holds one printer and there is no getter for it, so anything that calls
-        // setMessageLogging after this line silently switches the slow-message detector off. The
-        // startup line below is printed so the log says plainly who took the slot.
+        // setMessageLogging after this line silently switches the slow-message detector off.
         Looper.getMainLooper().setMessageLogging(printer)
 
         logger.note(
             "this library has taken the main Looper's message logging slot to time main-thread " +
-                "messages — anything that calls setMessageLogging after this switches that off",
+                "messages. Anything that calls setMessageLogging after this switches that off",
         )
 
         application.registerActivityLifecycleCallbacks(activityCallbacks)

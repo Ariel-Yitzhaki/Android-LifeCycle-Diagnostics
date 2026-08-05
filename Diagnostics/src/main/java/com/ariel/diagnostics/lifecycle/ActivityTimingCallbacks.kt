@@ -6,8 +6,8 @@ import android.os.Bundle
 import androidx.fragment.app.FragmentActivity
 
 /**
- * Times the developer's own code inside each Activity lifecycle callback, using the Pre/Post pairs
- * on Application.ActivityLifecycleCallbacks, and attaches FragmentTimingCallbacks to every Activity
+ * Times the app's own code inside each Activity lifecycle callback using the Pre/Post pairs on
+ * Application.ActivityLifecycleCallbacks, and attaches FragmentTimingCallbacks to every Activity
  * that can host fragments.
  */
 class ActivityTimingCallbacks(
@@ -16,9 +16,8 @@ class ActivityTimingCallbacks(
     private val fragmentCallbacks: FragmentTimingCallbacks,
 ) : Application.ActivityLifecycleCallbacks {
 
-    // Keyed by instance, not class name: two Activities of the same class are alive at once during
-    // a rotation and when the same screen sits on the back stack twice. Every Pre callback puts one
-    // entry and the matching Post callback removes it, so nothing accumulates.
+    // Keyed by instance, not class name: two Activities of the same class can be alive at once.
+    // Every Pre callback adds one entry and the matching Post callback removes it.
     private val startTimes = HashMap<Activity, Long>()
 
     // Registers the fragment callbacks before the Activity's own onCreate, because super.onCreate()
@@ -27,7 +26,7 @@ class ActivityTimingCallbacks(
         if (activity is FragmentActivity) {
             activity.supportFragmentManager.registerFragmentLifecycleCallbacks(fragmentCallbacks, true)
         }
-        // Marked last so the registration above is not counted as part of the developer's onCreate.
+        // Marked last so the registration above is not counted as part of the app's onCreate.
         markStart(activity)
     }
 
@@ -80,7 +79,7 @@ class ActivityTimingCallbacks(
     }
 
     // The seven callbacks below have no default implementation, so they must be overridden. The
-    // Pre/Post pairs above already bracket the same moments.
+    // Pre/Post pairs above already cover the same moments.
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
 
@@ -96,7 +95,6 @@ class ActivityTimingCallbacks(
 
     override fun onActivityDestroyed(activity: Activity) {}
 
-    // Starts the clock for the Activity.
     private fun markStart(activity: Activity) {
         // nanoTime is monotonic, so it never jumps when the wall clock is corrected.
         startTimes[activity] = System.nanoTime()

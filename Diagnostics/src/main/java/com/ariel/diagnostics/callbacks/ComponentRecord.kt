@@ -4,8 +4,7 @@ package com.ariel.diagnostics.callbacks
  * What this feature remembers about one Activity or Fragment instance while it is alive: its state
  * and a few counts that only mean something once it is destroyed.
  *
- * Nothing in here points at the component itself, only at values copied out of it — see
- * TransitionTracker for why that matters.
+ * Holds only values copied out of the component, never the component itself.
  */
 class ComponentRecord(
 
@@ -19,7 +18,7 @@ class ComponentRecord(
     val instanceId: String,
 
     /**
-     * True when this record was created by the component's own onCreate, so the whole life has been
+     * True when this record was created by the component's own onCreate, so its whole life has been
      * watched. When false, the end-of-life checks are skipped because the counts below are missing
      * their first half.
      */

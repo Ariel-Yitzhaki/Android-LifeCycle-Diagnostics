@@ -7,8 +7,8 @@ object ValidationConstants {
     const val LOG_TAG = "CallbackValidation"
 
     /**
-     * How many destroy/recreate cycles of one Activity class inside [RECREATE_WINDOW_MS] still count
-     * as normal. The cycle after this one is reported as thrash.
+     * How many destroy/recreate cycles of one Activity class inside [RECREATE_WINDOW_MS] still
+     * count as normal. The cycle after this one is reported as thrash.
      */
     const val RECREATE_LIMIT = 3
 

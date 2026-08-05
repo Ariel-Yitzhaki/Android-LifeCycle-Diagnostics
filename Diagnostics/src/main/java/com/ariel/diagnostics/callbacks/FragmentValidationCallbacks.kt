@@ -9,8 +9,6 @@ import androidx.fragment.app.FragmentManager
  * Passes Fragment lifecycle callbacks on to TransitionTracker, the way ActivityValidationCallbacks
  * does for Activities. View creation and destruction are counted rather than treated as lifecycle
  * states, because they can happen several times per fragment.
- *
- * One instance is shared by every Activity in the process.
  */
 class FragmentValidationCallbacks(
     private val tracker: TransitionTracker,
@@ -21,8 +19,8 @@ class FragmentValidationCallbacks(
         tracker.onEvent(f, f.javaClass.simpleName, "Fragment", "onCreate", LifecycleState.CREATED)
     }
 
-    // Runs after a Fragment's view has been built. Can happen more than once for the same fragment,
-    // because a fragment on the back stack loses its view and gets a new one when it comes back.
+    // Can happen more than once for the same fragment, because a fragment on the back stack loses
+    // its view and gets a new one when it comes back.
     override fun onFragmentViewCreated(
         fm: FragmentManager,
         f: Fragment,
@@ -49,8 +47,7 @@ class FragmentValidationCallbacks(
     }
 
     // Runs after a Fragment's own onDestroyView, which happens whenever the fragment goes onto the
-    // back stack and not only when the fragment itself is going away. This is the callback the
-    // missing-onDestroyView check counts.
+    // back stack and not only when the fragment itself is going away.
     override fun onFragmentViewDestroyed(fm: FragmentManager, f: Fragment) {
         tracker.onFragmentViewDestroyed(f, f.javaClass.simpleName)
     }

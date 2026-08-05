@@ -7,7 +7,7 @@ package com.ariel.diagnostics.leaks
 class LeakTally(private val logger: LeakLogger) {
 
     // Keys and values hold only strings and numbers, so this map can live for the whole session
-    // without keeping a screen in memory. The number of screen classes in an app is small and fixed.
+    // without keeping a screen in memory.
     //
     // No locking: recordResult() is called from LeakWatcher's background thread and nowhere else.
     private val records = HashMap<String, ScreenLeakRecord>()
@@ -33,11 +33,8 @@ class LeakTally(private val logger: LeakLogger) {
     }
 
     // Prints a finding for the record once it has been destroyed enough times and at least half of
-    // those were retained.
-    //
-    // Both conditions exist because a single retention is nearly always noise — the collector may
-    // not have got round to it, or a system service may be holding the last Activity. A screen
-    // retained again and again is the app's own bug.
+    // those were retained. Both conditions exist because a single retention is nearly always noise;
+    // a screen retained again and again is the app's own bug.
     private fun reportIfPattern(record: ScreenLeakRecord) {
         if (record.reported) {
             return
@@ -47,7 +44,7 @@ class LeakTally(private val logger: LeakLogger) {
             return
         }
 
-        // Written as a multiplication so there is no division and no rounding to argue about.
+        // Written as a multiplication so there is no division and no rounding.
         if (record.retainedCount * 2 < record.destroyedCount) {
             return
         }

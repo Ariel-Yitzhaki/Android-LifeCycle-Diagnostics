@@ -18,7 +18,7 @@ class FragmentTimingCallbacks(
 ) : FragmentManager.FragmentLifecycleCallbacks() {
 
     // Keyed by instance, not class name: one screen often has several live fragments of the same
-    // class. Entries are removed in onFragmentDestroyed, so the map cannot grow over a session.
+    // class. Entries are removed in onFragmentDestroyed.
     private val startTimes = HashMap<Fragment, Long>()
 
     override fun onFragmentPreCreated(fm: FragmentManager, f: Fragment, savedInstanceState: Bundle?) {
@@ -30,7 +30,7 @@ class FragmentTimingCallbacks(
         record(f, "onCreate", approximate = false)
     }
 
-    // Not reported — view creation is not one of the six measured callbacks — but the clock is
+    // Not reported, since view creation is not one of the six measured callbacks, but the clock is
     // restarted so the onStart gap does not also contain layout inflation.
     override fun onFragmentViewCreated(
         fm: FragmentManager,
@@ -63,7 +63,6 @@ class FragmentTimingCallbacks(
         startTimes.remove(f)
     }
 
-    // Starts, or restarts, the clock for the fragment.
     private fun mark(fragment: Fragment) {
         startTimes[fragment] = System.nanoTime()
     }
@@ -80,8 +79,8 @@ class FragmentTimingCallbacks(
             return
         }
 
-        // A fragment has no isChangingConfigurations of its own, and the host is already null by the
-        // time some of the late callbacks arrive.
+        // A fragment has no isChangingConfigurations of its own, and the host is already null by
+        // the time some of the late callbacks arrive.
         val activity = fragment.activity
         val configurationChange = if (activity == null) false else activity.isChangingConfigurations
 

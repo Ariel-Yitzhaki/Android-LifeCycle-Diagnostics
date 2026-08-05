@@ -6,10 +6,7 @@ package com.ariel.diagnostics.callbacks
  */
 enum class LifecycleState {
 
-    /**
-     * Nothing has been seen for this instance yet, because the first callback we received was not
-     * its onCreate. Every next state is accepted from here without complaint.
-     */
+    /** The first callback seen for this instance was not its onCreate. Any next state is accepted. */
     UNKNOWN,
 
     /** onCreate has arrived. The component exists but is not visible yet. */

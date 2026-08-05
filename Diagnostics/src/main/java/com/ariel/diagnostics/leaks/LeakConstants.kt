@@ -7,9 +7,9 @@ object LeakConstants {
     const val LOG_TAG = "LeakDetection"
 
     /**
-     * How long to wait after a component is destroyed before checking whether it is still in memory.
-     * Checking sooner would report almost everything, since the framework itself holds a destroyed
-     * screen briefly while it finishes tearing it down.
+     * How long to wait after a component is destroyed before checking whether it is still in
+     * memory. The framework itself holds a destroyed screen briefly while it finishes tearing it
+     * down, so checking sooner would report almost everything.
      */
     const val WATCH_DELAY_MS = 5_000L
 

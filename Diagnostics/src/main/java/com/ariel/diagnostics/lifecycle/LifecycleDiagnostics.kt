@@ -8,11 +8,10 @@ import android.app.Application
  */
 object LifecycleDiagnostics {
 
-    // Guards against a second registration, which would print every measurement twice. Only touched
-    // from Application.onCreate on the main thread, so it needs no locking.
+    // Guards against a second registration, which would print every measurement twice.
     private var installed = false
 
-    // Starts measuring. Safe to call more than once; every call after the first does nothing.
+    // Safe to call more than once; every call after the first does nothing.
     fun install(application: Application) {
         if (installed) {
             return

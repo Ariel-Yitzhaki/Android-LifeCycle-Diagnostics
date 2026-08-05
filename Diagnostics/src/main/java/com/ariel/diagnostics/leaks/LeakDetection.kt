@@ -9,14 +9,13 @@ import android.app.Application
 object LeakDetection {
 
     // Guards against a second registration and a second background thread, which would check and
-    // report everything twice. Only touched from Application.onCreate on the main thread.
+    // report everything twice.
     private var installed = false
 
-    // Starts watching for leaks. Safe to call more than once; every call after the first does
-    // nothing.
+    // Safe to call more than once; every call after the first does nothing.
     //
     // Worth keeping to debug builds: this feature asks for a garbage collection a few seconds after
-    // every screen the user leaves, which is real work to be doing in a shipped app.
+    // every screen the user leaves.
     fun install(application: Application) {
         if (installed) {
             return

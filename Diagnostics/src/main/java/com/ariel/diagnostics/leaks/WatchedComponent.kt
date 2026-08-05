@@ -5,8 +5,8 @@ import java.lang.ref.WeakReference
 /**
  * One destroyed Activity, Fragment or Fragment view that the library is waiting to check on.
  *
- * Every field is either a plain value or a WeakReference, which is what makes it safe for
- * [LeakWatcher] to keep these for five seconds without becoming the leak it is looking for.
+ * Every field is either a plain value or a WeakReference, so [LeakWatcher] can keep these without
+ * becoming the leak it is looking for.
  */
 class WatchedComponent(
 

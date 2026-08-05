@@ -12,7 +12,7 @@ class ScreenLeakRecord(
     /** Simple class name of the screen, for example "ActivityLeakActivity". */
     val screenName: String,
 
-    /** "Activity", "Fragment" or "Fragment view" — which of the three this tally counts. */
+    /** Which of "Activity", "Fragment" or "Fragment view" this tally counts. */
     val kind: String,
 ) {
 
