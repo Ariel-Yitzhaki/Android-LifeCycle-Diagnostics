@@ -29,13 +29,20 @@ object MainThreadBlocking {
         installed = true
 
         val logger = BlockingLogger()
-        val foregroundActivity = ForegroundActivityTracker()
-        val watchdog = SlowMessageWatchdog(logger, foregroundActivity)
+        val foregroundScreen = ForegroundScreenTracker()
+        val busyTracker = MainThreadBusyTracker(logger, foregroundScreen)
+        val watchdog = SlowMessageWatchdog(logger, foregroundScreen, busyTracker)
         val printer = MainThreadPrinter(watchdog)
-        val strictModeThreadWatcher = StrictModeThreadWatcher(logger, foregroundActivity)
-        val jankTracker = JankTracker(logger)
-        val activityCallbacks =
-            BlockingActivityCallbacks(strictModeThreadWatcher, jankTracker, foregroundActivity)
+        val strictModeThreadWatcher = StrictModeThreadWatcher(logger, foregroundScreen)
+        val jankTracker = JankTracker(logger, foregroundScreen)
+        val fragmentCallbacks = BlockingFragmentCallbacks(foregroundScreen, jankTracker, busyTracker)
+        val activityCallbacks = BlockingActivityCallbacks(
+            strictModeThreadWatcher,
+            jankTracker,
+            foregroundScreen,
+            busyTracker,
+            fragmentCallbacks,
+        )
 
         // The background thread has to exist before the first message can be timed, so it is started
         // before the printer is attached below.

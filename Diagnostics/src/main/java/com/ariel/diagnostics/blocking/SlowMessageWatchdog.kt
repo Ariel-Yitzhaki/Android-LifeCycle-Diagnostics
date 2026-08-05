@@ -18,7 +18,8 @@ import com.ariel.diagnostics.StackSummary
  */
 class SlowMessageWatchdog(
     private val logger: BlockingLogger,
-    private val foregroundActivity: ForegroundActivityTracker,
+    private val foregroundScreen: ForegroundScreenTracker,
+    private val busyTracker: MainThreadBusyTracker,
 ) {
 
     private val mainThread: Thread = Looper.getMainLooper().thread
@@ -94,6 +95,13 @@ class SlowMessageWatchdog(
             return
         }
 
+        // The Printer is attached from inside a main-thread message, so the first line it is ever
+        // handed is that message's own finish, with no start to pair it with. Its start time is
+        // still zero, and a duration measured from there would be the time since the device booted.
+        if (messageSequence == 0) {
+            return
+        }
+
         // Cleared before the cancel below, so a countdown that has already begun running on the
         // other thread still sees that the message is over and says nothing.
         messageRunning = false
@@ -103,15 +111,20 @@ class SlowMessageWatchdog(
         // That is what the sequence number there is for.
         currentHandler.removeMessages(MSG_CHECK_SLOW_MESSAGE)
 
-        reportDurationIfReported()
+        // Written only in onMessageStarted, on this same thread, so the next message cannot have
+        // moved the start time before this runs.
+        val totalMillis = SystemClock.uptimeMillis() - messageStartUptimeMillis
+
+        // Every message is handed over, not only the ones that tripped the countdown: a screen held
+        // up by two hundred short messages never trips it and would otherwise be reported nowhere.
+        busyTracker.onMessageFinished(totalMillis)
+
+        reportDurationIfReported(totalMillis)
     }
 
     // Runs on the main thread, straight after a message ends. Prints the second half of a finding:
     // how long the message ran in total, which is the number the first line could not give.
-    private fun reportDurationIfReported() {
-        // Both fields read below are written only in onMessageStarted, on this same thread, so the
-        // next message cannot have moved them before this runs.
-        //
+    private fun reportDurationIfReported(totalMillis: Long) {
         // The background thread may still be inside reportIfStillRunning() and not have set
         // reportedSequence yet, in which case this message loses its follow-up line. Harmless: the
         // first line has already been printed and carries the stack, which is the useful half.
@@ -119,13 +132,11 @@ class SlowMessageWatchdog(
             return
         }
 
-        val totalMillis = SystemClock.uptimeMillis() - messageStartUptimeMillis
-
         // Only ever reached for a message that already tripped the countdown, so this cannot add
         // logging to the ordinary path, which runs thousands of times a minute.
         logger.report(
             "that message finished after $totalMillis ms in total " +
-                "${foregroundActivity.describe()}",
+                "${foregroundScreen.describe()}",
         )
     }
 
@@ -157,7 +168,7 @@ class SlowMessageWatchdog(
         logger.report(
             "the main thread has been stuck on one message for over " +
                 "${BlockingConstants.SLOW_MESSAGE_THRESHOLD_MS} ms " +
-                "${foregroundActivity.describe()}. Main thread was in: " +
+                "${foregroundScreen.describe()}. Main thread was in: " +
                 "${StackSummary.describe(frames, BlockingConstants.STACK_FRAMES_LOGGED)} " +
                 "(snapshot taken at the ${BlockingConstants.SLOW_MESSAGE_THRESHOLD_MS} ms mark, so " +
                 "it can show code that ran after the slow part)",

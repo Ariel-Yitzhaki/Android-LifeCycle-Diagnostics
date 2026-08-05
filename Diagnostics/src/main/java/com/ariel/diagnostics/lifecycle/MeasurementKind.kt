@@ -28,4 +28,15 @@ enum class MeasurementKind {
      * either way.
      */
     TIME_ON_SCREEN,
+
+    /**
+     * The gap from a Fragment's onCreate to its view existing, which covers onCreateView, the
+     * inflation inside it, and onViewCreated.
+     *
+     * Named after neither of those two callbacks because it contains both, and in most apps the
+     * cost is split across them: the layout inflates in one and the views are found, wired up and
+     * given adapters in the other. Blaming either name alone would send the reader to the wrong
+     * method.
+     */
+    VIEW_CREATION,
 }

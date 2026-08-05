@@ -31,6 +31,7 @@ class TimingLogger {
     // Builds the printed line, for example:
     // SlowCreateActivity.onCreate took 412.35 ms  SLOW (over 50 ms)  [first time seen]
     // HomeFeedFragment was on screen for 84797.41 ms
+    // MapFragment took ~312.75 ms to build its view  SLOW (over 50 ms)
     private fun buildLine(timing: LifecycleTiming, slow: Boolean): String {
         val millis = timing.durationNanos.toDouble() / DiagnosticsConstants.NANOS_PER_MILLI
         // Locale.US so the decimal separator is always a dot.
@@ -39,19 +40,30 @@ class TimingLogger {
         val line = StringBuilder()
         line.append(timing.screenName)
 
-        if (timing.kind == MeasurementKind.TIME_ON_SCREEN) {
-            // Deliberately not worded as a callback duration: naming onPause here would suggest the
-            // fragment spent this long inside it.
-            line.append(" was on screen for ")
-            line.append(duration)
-        } else {
-            line.append(".")
-            line.append(timing.callbackName)
-            line.append(" took ")
-            if (timing.kind == MeasurementKind.BETWEEN_CALLBACKS) {
-                line.append("~")
+        when (timing.kind) {
+            MeasurementKind.TIME_ON_SCREEN -> {
+                // Deliberately not worded as a callback duration: naming onPause here would suggest
+                // the fragment spent this long inside it.
+                line.append(" was on screen for ")
+                line.append(duration)
             }
-            line.append(duration)
+
+            MeasurementKind.VIEW_CREATION -> {
+                // No callback name for the same reason: this one spans two of them.
+                line.append(" took ~")
+                line.append(duration)
+                line.append(" to build its view")
+            }
+
+            MeasurementKind.EXACT, MeasurementKind.BETWEEN_CALLBACKS -> {
+                line.append(".")
+                line.append(timing.callbackName)
+                line.append(" took ")
+                if (timing.kind == MeasurementKind.BETWEEN_CALLBACKS) {
+                    line.append("~")
+                }
+                line.append(duration)
+            }
         }
 
         if (slow) {
@@ -67,6 +79,9 @@ class TimingLogger {
         }
         if (timing.kind == MeasurementKind.BETWEEN_CALLBACKS) {
             line.append("  [approx: gap since the previous callback, can include work from other components]")
+        }
+        if (timing.kind == MeasurementKind.VIEW_CREATION) {
+            line.append("  [approx: covers onCreateView and onViewCreated, including any fragment inflated inside them]")
         }
         return line.toString()
     }

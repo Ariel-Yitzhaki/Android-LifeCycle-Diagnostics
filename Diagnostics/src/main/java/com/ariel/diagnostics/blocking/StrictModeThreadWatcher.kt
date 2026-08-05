@@ -13,7 +13,7 @@ import com.ariel.diagnostics.StackSummary
  */
 class StrictModeThreadWatcher(
     private val logger: BlockingLogger,
-    private val foregroundActivity: ForegroundActivityTracker,
+    private val foregroundScreen: ForegroundScreenTracker,
 ) : StrictMode.OnThreadViolationListener {
 
     private var installed = false
@@ -65,7 +65,7 @@ class StrictModeThreadWatcher(
         )
 
         logger.report(
-            "StrictMode $violationKind on the main thread ${foregroundActivity.describe()}, " +
+            "StrictMode $violationKind on the main thread ${foregroundScreen.describe()}, " +
                 "caused by: $origin",
         )
     }

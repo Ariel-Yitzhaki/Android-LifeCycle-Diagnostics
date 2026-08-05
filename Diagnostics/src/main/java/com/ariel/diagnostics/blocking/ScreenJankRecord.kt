@@ -1,31 +1,23 @@
 package com.ariel.diagnostics.blocking
 
-import androidx.metrics.performance.JankStats
-
 /**
- * The frame counts for one Activity for as long as it is on screen, plus the JankStats object
- * feeding them, which has to be switched off again when the screen stops.
+ * The frame counts for one screen for as long as that screen was the one in front of the user.
  *
- * One of these is created every time an Activity becomes visible and thrown away when it stops, so
- * the numbers always describe a single visit to a single screen.
+ * One of these is created every time the foreground screen changes and closed when it changes
+ * again, so the numbers always describe a single visit to a single screen rather than everything
+ * one window drew over a session.
  */
 class ScreenJankRecord(
 
-    /** Simple class name of the Activity these counts belong to, for example "JankListActivity". */
-    val activityName: String,
+    /** Simple class name of the Activity or Fragment these counts belong to. */
+    val screenName: String,
 ) {
 
     /**
-     * The JankStats object delivering frames into these counts. Null only between this record being
-     * created and JankTracker.startTracking filling it in.
-     */
-    var jankStats: JankStats? = null
-
-    /**
-     * How many frames this screen has drawn during this visit.
+     * How many frames were drawn while this screen was in front.
      *
-     * @Volatile because frames are counted on JankStats' background thread while the totals are
-     * read on the main thread when the screen stops.
+     * @Volatile because frames are counted on the thread JankStats delivers them on while the
+     * totals are read on the main thread when the screen changes.
      */
     @Volatile
     var totalFrames = 0

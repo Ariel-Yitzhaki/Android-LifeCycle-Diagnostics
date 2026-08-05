@@ -227,8 +227,23 @@ Three detectors, all reporting under the same tag.
 > including `toString()` on the Handler and callback, before the `Printer` can ignore it. That cost
 > lands on the thread being measured. On an emulator or a debuggable build it stacks with an
 > emulated GPU, slower disk and unoptimised code, so the 200 ms threshold gets crossed by work that
-> would never approach it in release on real hardware. StrictMode violations are the exception —
+> would never approach it in release on real hardware. StrictMode violations are the exception:
 > they are detected per call, not per millisecond, so their count is the same everywhere.
+
+All three findings name the screen the user was looking at when they happened. That is the fragment
+in front, with the Activity hosting it in brackets, falling back to the Activity alone when no
+fragment is resumed:
+
+```
+with TripDetailFragment (in MainActivity) in the foreground
+with SlowCreateActivity in the foreground
+```
+
+The fragment matters because an app can be one Activity and thirty fragments. Naming only the
+Activity would attribute every finding in the session to the same screen. Where a fragment hosts
+another, such as one holding a `SupportMapFragment`, the outer one is named: a child fragment's
+`onResume` runs inside its parent's, so the parent's callback arrives last and wins. That is also
+the name a person would give the screen.
 
 **Slow messages.** The `Printer` above is called around every message the main thread runs. A
 countdown runs on a background thread, and if a message is still running after 200 ms the background
@@ -242,19 +257,29 @@ W/MainThreadBlocking: that message finished after 3421 ms in total with SlowCrea
 
 It takes two lines because the first one cannot know the answer. It is written at a fixed delay
 after the message started, so any duration measured there would be the threshold plus scheduling
-jitter — a 210 ms hiccup and a four second freeze would print the same number. The stack is a
+jitter, and a 210 ms hiccup and a four second freeze would print the same number. The stack is a
 snapshot taken at the 200 ms mark, not a recording, so it can show code that ran after the slow
 part.
 
 Occasionally the second line is missing, when the message ends at the same moment the first line is
 being written. The stack is the useful half and it has already been printed.
 
-**Dropped frames.** JankStats counts the frames each Activity draws between `onStart` and `onStop`.
-When a visit ends having dropped more than 5 per cent of its frames, one line is printed:
+**Dropped frames.** JankStats counts frames per window, but the counts are cut and reported per
+screen. Every time the foreground screen changes the running counts are closed off and a fresh set
+is opened, so a fragment that dropped half its frames is reported on its own rather than averaged
+into everything else the same Activity drew that session:
 
 ```
-W/MainThreadBlocking: 18.4% of JankListActivity's frames were dropped while it was on screen (37 of 201, over the 5.0% limit) ...
+W/MainThreadBlocking: 18.4% of JankListActivity's frames were dropped while it was in front (37 of 201, over the 5.0% limit) ...
+W/MainThreadBlocking: 22.7% of TripDetailFragment's frames were dropped while it was in front (44 of 194, over the 5.0% limit) ...
 ```
+
+A screen that drew fewer than 20 frames is not reported at all. Screens change often enough that
+short stretches are ordinary, and one late frame out of four is 25 per cent describing nothing.
+
+A `DialogFragment` draws into a window of its own, so it gets its own counter between `onStart` and
+`onStop` and its frames are counted there rather than lost. Plain `Dialog` and `AlertDialog` objects
+an app builds and shows itself cannot be counted, because the framework offers no callback for them.
 
 Ignore these on an emulator. Frame timing there is measured against an emulated vsync, so the
 percentage does not describe anything a user would experience.
@@ -289,6 +314,7 @@ Every tunable value lives in one `object` per feature. Edit the constant and reb
 | `STACK_FRAMES_LOGGED` | `blocking/BlockingConstants.kt` | 8 |
 | `VIOLATION_FRAMES_LOGGED` | `blocking/BlockingConstants.kt` | 8 |
 | `JANK_PERCENT_THRESHOLD` | `blocking/BlockingConstants.kt` | 5.0 |
+| `MIN_FRAMES_COUNTED` | `blocking/BlockingConstants.kt` | 20 |
 
 The Logcat tag each feature prints under is in the same file, as `LOG_TAG`.
 
@@ -416,6 +442,15 @@ force, so nothing the app asked for is switched off.
   half for them. `onPause` cannot be measured at all and is reported as time on screen instead.
 - **A slow message's duration arrives on a second line**, once the message ends. The line that
   carries the stack cannot carry a duration, because it is written at a fixed point in time.
+- **Only one fragment names the screen.** The foreground screen is the last fragment to resume, which
+  is the right answer for a fragment nested inside another but arbitrary for two siblings resumed
+  side by side, as in a master and detail layout on a tablet.
+- **Frames are only counted in windows the library is told about**, which means Activity windows and
+  `DialogFragment` windows. A `Dialog`, `AlertDialog`, `BottomSheetDialog` or `PopupWindow` an app
+  builds itself has no lifecycle callback to hook, so nothing it draws is counted.
+- **Frame counts are cut at a screen change, not at a frame boundary.** A frame arriving during the
+  swap is counted against whichever screen the frame-timing thread had already read, so the boundary
+  between two screens is accurate to about one frame.
 - **Main-thread blocking is a debug-build tool.** Timing main-thread messages makes the `Looper`
   build a description of every one of them, so the feature slows down the thread it measures.
   Results from an emulator overstate the problem; StrictMode violations are the exception.
