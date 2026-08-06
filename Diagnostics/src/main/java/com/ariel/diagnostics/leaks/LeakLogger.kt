@@ -2,8 +2,17 @@ package com.ariel.diagnostics.leaks
 
 import android.util.Log
 
-/** Prints this feature's findings to Logcat, one line each. */
+/** Prints this feature's results to Logcat, one line each. */
 class LeakLogger {
+
+    // Prints one ordinary line at debug level, such as the startup line printed at install time.
+    //
+    // This feature would otherwise say nothing at all in a healthy app, and a tag that has never
+    // been printed under does not exist as far as Logcat is concerned: it cannot be filtered on and
+    // Android Studio does not offer it. Silence would then look the same as the feature being off.
+    fun note(message: String) {
+        Log.d(LeakConstants.LOG_TAG, message)
+    }
 
     fun report(record: ScreenLeakRecord) {
         Log.w(

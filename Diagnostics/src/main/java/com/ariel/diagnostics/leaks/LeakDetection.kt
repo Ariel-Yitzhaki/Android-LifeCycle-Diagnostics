@@ -28,6 +28,16 @@ object LeakDetection {
         // The background thread has to exist before the first screen can be destroyed.
         watcher.start()
 
+        // Printed so the tag exists from launch. Every other line this feature prints is a problem
+        // it found, so without this one a healthy app would never print under the tag at all, and
+        // there would be no way to tell "nothing was retained" from "the library never started".
+        logger.note(
+            "watching every destroyed Activity, Fragment and Fragment view. Nothing more is " +
+                "printed here until one class has been destroyed at least " +
+                "${LeakConstants.MIN_DESTROY_COUNT} times with half of those still in memory, so " +
+                "silence under this tag is the good answer",
+        )
+
         application.registerActivityLifecycleCallbacks(activityCallbacks)
     }
 }

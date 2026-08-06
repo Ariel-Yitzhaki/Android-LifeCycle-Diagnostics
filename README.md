@@ -109,24 +109,31 @@ com.ariel.diagnostics/
 - **Only the logger touches `Log`**, so everything one feature prints is worded in one place.
 - **Nothing holds a screen.** Names and weak references only, so watching for leaks never causes one.
 - **Fragment callbacks register recursively**, so a Fragment nested inside another is measured like any other.
-
-### Starting itself
-
-`DiagnosticsInitProvider` is declared in the library's own manifest and merged into yours. Android creates content providers before `Application.onCreate`, which is the earliest a library can run without app code.
-
-- `android:authorities` is built from `${applicationId}`, so two apps using the library can be installed side by side
-- `android:initOrder="100"` puts it ahead of other libraries, so their setup gets measured rather than missed
-- StrictMode policies install from `onActivityPreCreated` instead, so an app calling `setThreadPolicy` in `Application.onCreate` cannot wipe them
-- The provider runs in the default process only
 <br>
 
 ## Setup
 
-### Prerequisites
-- Min SDK 29 or higher, Compile SDK 36
-- Android Studio (latest stable)
+There are two ways in. Clone the repository and run the sample apps to see what the library reports, or add it to an app of your own.
 
-### Steps
+### Option 1: Run the sample apps
+
+Nothing to configure. Both samples depend on the library as a local module, so cloning and running is the whole process. There is no dependency to add, no version to pick and no key to supply.
+
+```bash
+git clone https://github.com/Ariel-Yitzhaki/Android-LifeCycle-Diagnostics.git
+```
+
+Open the project in Android Studio and run the `sample-views` or `sample-compose` configuration, or install both from the command line:
+
+```bash
+./gradlew :sample-views:installDebug :sample-compose:installDebug
+```
+
+Then filter Logcat to the four tags and tap through the screens. See [Sample Apps](#sample-apps) for what each one plants.
+
+### Option 2: Add it to your own app
+
+Requires Min SDK 29 or higher and Compile SDK 36.
 
 **1. Add JitPack** to `settings.gradle.kts`:
 
@@ -151,28 +158,6 @@ dependencies {
 `debugImplementation` is the one to use. The library times every main thread message and asks for a garbage collection after every screen the user leaves, which is real work you do not want shipped.
 
 **3. Run the app** and read Logcat. No `Application` subclass, no `install()` call, no annotation.
-
-### Picking features yourself
-
-Remove the provider from the merged manifest:
-
-```xml
-<provider
-    android:name="com.ariel.diagnostics.DiagnosticsInitProvider"
-    android:authorities="${applicationId}.diagnostics-init"
-    tools:node="remove" />
-```
-
-Then install what you want from `Application.onCreate`:
-
-```kotlin
-LifecycleDiagnostics.install(this)
-CallbackValidation.install(this)
-LeakDetection.install(this)
-MainThreadBlocking.install(this)
-```
-
-Every `install()` is idempotent. Call them the same way for any process declared with `android:process`.
 <br>
 
 ## Thresholds
@@ -205,22 +190,6 @@ Two runnable apps plant the faults the library catches. Most screens come as a F
 - `sample-views` covers 19 Activity and Fragment screens using Views, view binding and RecyclerView
 - `sample-compose` covers 19 routes in one Activity using Compose and Navigation
 
-### Running them
-
-Nothing from the Setup section applies here. Both samples depend on the library as a local module, so cloning and running is the whole process. There is no dependency to add, no version to pick and no key to supply.
-
-```bash
-git clone https://github.com/Ariel-Yitzhaki/Android-LifeCycle-Diagnostics.git
-```
-
-Open the project in Android Studio and run the `sample-views` or `sample-compose` configuration, or install both from the command line:
-
-```bash
-./gradlew :sample-views:installDebug :sample-compose:installDebug
-```
-
-Then filter Logcat to the four tags and tap through the screens. The samples use plain `implementation` rather than `debugImplementation`, so their release builds log as well.
-
 | Screen | What it plants |
 | --- | --- |
 | `slow-create` | 400 ms of real CPU work inline in `onCreate` |
@@ -235,8 +204,6 @@ Then filter Logcat to the four tags and tap through the screens. The samples use
 | `relaunch-self` | Finishes and relaunches itself 5 times |
 | `start-for-result` | A clean round trip to a second Activity and back |
 | `secondary-process` | A screen declared with `android:process=":secondary"` |
-
-The work is real rather than simulated. `BusyWork` spins against the wall clock, and `SampleFiles` writes a 4 MiB blob and reads it back in unbuffered 512 byte chunks.
 <br>
 
 ## Limitations
@@ -250,25 +217,6 @@ The work is real rather than simulated. `BusyWork` spins against the wall clock,
 - **Fragment timings other than `onCreate` are gaps**, since the framework offers no hook before them.
 - **Dialogs an app builds itself are not counted.** Only Activity and `DialogFragment` windows have a lifecycle to hook.
 - **Everything goes to Logcat.** There is no API for reading results programmatically.
-<br>
-
-## Building
-
-```bash
-./gradlew :Diagnostics:assembleDebug
-```
-
-The `.aar` lands in `Diagnostics/build/outputs/aar/`. On Windows use `gradlew.bat`.
-
-Releases need nothing but a pushed tag. `jitpack.yml` pins JDK 17 and limits the build to `:Diagnostics`, and the tag becomes the version, so no version number is hardcoded in the build files.
-
-```bash
-git tag 1.2.0
-```
-
-```bash
-git push origin 1.2.0
-```
 <br>
 
 ## License
