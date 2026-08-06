@@ -26,8 +26,12 @@ class CoverFragment : Fragment() {
         val views = requireNotNull(binding)
         views.screenName.text = javaClass.simpleName
         views.screenFault.text = "No fault — a plain fragment placed on top of another"
-        views.screenStatus.text = "The fragment underneath has had its view destroyed but is still alive."
-        views.screenNote.text = "Press Back to return to it."
+        views.screenStatus.text =
+            "The fragment underneath is on the back stack: its view has been destroyed, but the " +
+                "fragment itself is still alive."
+        views.screenNote.text =
+            "Press Back to return to it. That round trip is one destroyed view — the library " +
+                "needs three before it will report a pattern."
     }
 
     override fun onDestroyView() {

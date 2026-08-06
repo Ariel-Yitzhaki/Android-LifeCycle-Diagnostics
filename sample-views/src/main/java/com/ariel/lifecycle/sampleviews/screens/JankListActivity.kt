@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.ariel.lifecycle.sampleviews.ScreenCatalog
 import com.ariel.lifecycle.sampleviews.core.HeavyRows
 import com.ariel.lifecycle.sampleviews.databinding.ActivityListBinding
 import com.ariel.lifecycle.sampleviews.ui.RowViewHolder
@@ -27,9 +28,11 @@ class JankListActivity : AppCompatActivity() {
 
         binding.screenName.text = javaClass.simpleName
         binding.screenFault.text =
-            "FAULT — ${HeavyRows.COST_MS}ms of blocking work per row, inside onBindViewHolder()"
+            "FAULT — ${HeavyRows.COST_MS}ms of blocking work per row, inside onBindViewHolder()\n" +
+                "Look for: ${ScreenCatalog.expectationFor(javaClass.simpleName)}"
         binding.screenStatus.text =
-            "${HeavyRows.ROW_COUNT} rows, recomputed on every bind. Scroll to drop frames."
+            "${HeavyRows.ROW_COUNT} rows, recomputed on every bind, in both directions. Fling the " +
+                "list for a few seconds."
 
         binding.list.layoutManager = LinearLayoutManager(this)
         binding.list.adapter = JankAdapter()

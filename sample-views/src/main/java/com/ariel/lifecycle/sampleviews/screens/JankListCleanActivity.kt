@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.ariel.lifecycle.sampleviews.ScreenCatalog
 import com.ariel.lifecycle.sampleviews.core.HeavyRows
 import com.ariel.lifecycle.sampleviews.databinding.ActivityListBinding
 import com.ariel.lifecycle.sampleviews.ui.RowViewHolder
@@ -32,9 +33,11 @@ class JankListCleanActivity : AppCompatActivity() {
 
         binding.screenName.text = javaClass.simpleName
         binding.screenFault.text =
-            "CONTROL — same ${HeavyRows.COST_MS}ms per row, computed on Dispatchers.Default and cached"
+            "CONTROL — same ${HeavyRows.COST_MS}ms per row, computed on Dispatchers.Default and " +
+                "cached\nLook for: ${ScreenCatalog.expectationFor(javaClass.simpleName)}"
         binding.screenStatus.text =
-            "${HeavyRows.ROW_COUNT} rows. Rows fill in as they resolve; scrolling never blocks."
+            "${HeavyRows.ROW_COUNT} rows. Fling it the same way: rows fill in as they resolve, " +
+                "and no bind ever exceeds a frame."
 
         binding.list.layoutManager = LinearLayoutManager(this)
         binding.list.adapter = CleanAdapter(lifecycleScope)

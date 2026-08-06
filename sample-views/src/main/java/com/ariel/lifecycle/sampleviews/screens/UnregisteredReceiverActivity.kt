@@ -54,7 +54,9 @@ class UnregisteredReceiverActivity : SimpleScreenActivity() {
         setStatus("Broadcasts received by this instance: $received")
         setNote(
             "Registrations made since process start: $registrations\n" +
-                "Unregistrations: 0 — rotate or leave, then check logcat for IntentReceiverLeaked."
+                "Unregistrations: 0 — the receiver is an inner class, so it holds this Activity " +
+                "for as long as it stays registered, which is forever. Leave and re-enter four " +
+                "times, then wait a few seconds for the finding."
         )
     }
 

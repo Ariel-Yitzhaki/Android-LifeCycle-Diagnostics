@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import com.ariel.lifecycle.sampleviews.ScreenCatalog
 import com.ariel.lifecycle.sampleviews.core.GlobalListenerRegistry
 import com.ariel.lifecycle.sampleviews.databinding.FragmentSimpleBinding
 
@@ -33,9 +34,13 @@ class ViewModelLeakFragment : Fragment() {
         val views = requireNotNull(binding)
         views.screenName.text = javaClass.simpleName
         views.screenFault.text =
-            "FAULT — ViewModel registers with a global singleton and never unregisters in onCleared()"
+            "FAULT — ViewModel registers with a global singleton and never unregisters in " +
+                "onCleared()\nLook for: ${ScreenCatalog.expectationFor(javaClass.simpleName)}"
         views.screenNote.text =
-            "Leave this screen and come back: onCleared() runs, but the registry never shrinks."
+            "Leave this screen and come back: onCleared() runs, but the registry never shrinks. " +
+                "The count below is the only place this leak is visible — Logcat stays silent, " +
+                "because a ViewModel that holds no Activity, Fragment or View is not something " +
+                "the library watches."
 
         views.actionPrimary.isVisible = true
         views.actionPrimary.text = "Refresh registry count"

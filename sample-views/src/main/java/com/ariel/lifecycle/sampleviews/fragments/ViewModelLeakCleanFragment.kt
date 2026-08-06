@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import com.ariel.lifecycle.sampleviews.ScreenCatalog
 import com.ariel.lifecycle.sampleviews.core.GlobalListenerRegistry
 import com.ariel.lifecycle.sampleviews.databinding.FragmentSimpleBinding
 
@@ -27,9 +28,11 @@ class ViewModelLeakCleanFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         val views = requireNotNull(binding)
         views.screenName.text = javaClass.simpleName
-        views.screenFault.text = "CONTROL — same registration, unregistered in onCleared()"
+        views.screenFault.text = "CONTROL — same registration, unregistered in onCleared()\n" +
+            "Look for: ${ScreenCatalog.expectationFor(javaClass.simpleName)}"
         views.screenNote.text =
-            "Leave and come back: this screen's entry is removed every time the ViewModel is cleared."
+            "Leave and come back: this screen's entry is removed every time the ViewModel is " +
+                "cleared, so the count below never grows. Compare it with ViewModelLeakFragment."
 
         views.actionPrimary.isVisible = true
         views.actionPrimary.text = "Refresh registry count"

@@ -8,6 +8,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.ariel.lifecycle.sampleviews.R
+import com.ariel.lifecycle.sampleviews.ScreenCatalog
 import com.ariel.lifecycle.sampleviews.databinding.FragmentSimpleBinding
 
 /**
@@ -40,13 +41,16 @@ class FragmentViewLeakFragment : Fragment() {
         val views = requireNotNull(binding)
         views.screenName.text = javaClass.simpleName
         views.screenFault.text =
-            "FAULT — keeps the view binding in a field and never nulls it in onDestroyView()"
+            "FAULT — keeps the view binding in a field and never nulls it in onDestroyView()\n" +
+                "Look for: ${ScreenCatalog.expectationFor(javaClass.simpleName)}"
         views.screenStatus.text =
             "View trees this fragment instance has created: ${retainedViewTrees.size}\n" +
                 "View trees it still references: ${retainedViewTrees.size} (should be 1)"
         views.screenNote.text =
-            "Tap below, then press Back. The fragment survives on the back stack, its old view does " +
-                "not — but this fragment is still holding on to it."
+            "Tap below, then press Back, and repeat four times. Covering this fragment destroys " +
+                "its view while the fragment itself survives on the back stack — and this " +
+                "fragment is still holding the view it was told to let go of. The library needs " +
+                "three of those before it will call it a pattern."
 
         views.actionPrimary.isVisible = true
         views.actionPrimary.text = "Cover this fragment (destroys its view)"

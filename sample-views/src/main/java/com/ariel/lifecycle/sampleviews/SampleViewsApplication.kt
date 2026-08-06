@@ -1,6 +1,7 @@
 package com.ariel.lifecycle.sampleviews
 
 import android.app.Application
+import com.ariel.diagnostics.blocking.MainThreadBlocking
 import com.ariel.diagnostics.callbacks.CallbackValidation
 import com.ariel.diagnostics.leaks.LeakDetection
 import com.ariel.diagnostics.lifecycle.LifecycleDiagnostics
@@ -11,7 +12,7 @@ class SampleViewsApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // The three features are not installed here any more. DiagnosticsInitProvider in the library
+        // The four features are not installed here any more. DiagnosticsInitProvider in the library
         // installs them before this method runs, so an app gets them from the dependency alone. This
         // class is still here for the sample's own setup below.
 
@@ -22,11 +23,13 @@ class SampleViewsApplication : Application() {
             thread(name = "sample-blob-seed", isDaemon = true) { SampleFiles.ensureSeeded(this) }
         } else {
             // A provider declared without android:process is only created in the default process, so
-            // :secondary installs the features by hand to keep measuring its own Activities. Each
-            // install() is idempotent, so this stays correct even if the provider does run here.
+            // :secondary installs the features by hand to keep measuring its own Activities. All
+            // four, so a screen in this process is watched exactly like one in the main process.
+            // Each install() is idempotent, so this stays correct even if the provider does run here.
             LifecycleDiagnostics.install(this)
             CallbackValidation.install(this)
             LeakDetection.install(this)
+            MainThreadBlocking.install(this)
         }
     }
 }
