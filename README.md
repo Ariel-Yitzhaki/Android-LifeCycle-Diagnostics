@@ -5,8 +5,9 @@
 
 # Android Lifecycle Diagnostics
 
+<br> 
 
-
+Link to video:  [Project video presentation for Android-Dev-Afeka download link](https://github.com/Ariel-Yitzhaki/Android-LifeCycle-Diagnostics/releases/download/Media/Video.Presentation.of.Diagnostics.Project.mp4)
 
 <br>
 
