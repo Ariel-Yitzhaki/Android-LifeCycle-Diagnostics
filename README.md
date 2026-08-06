@@ -4,6 +4,10 @@
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 # Android Lifecycle Diagnostics
+
+
+
+
 <br>
 
 ## Description
@@ -13,7 +17,7 @@ An Android library that watches Activity and Fragment lifecycles at runtime and 
 No dashboard, no heap dump, no setup code. Add the dependency, run the app, read the log.
 
 Built with Kotlin, AndroidX Fragment, JankStats and StrictMode.
-<br><br>
+
 
 ## Features
 
@@ -25,6 +29,11 @@ Built with Kotlin, AndroidX Fragment, JankStats and StrictMode.
 - Anything over 50 ms is flagged `SLOW`
 - A Fragment's resume to pause gap is reported as time on screen, never as work
 <br>
+<br>
+
+https://github.com/user-attachments/assets/45ff60c8-7953-4569-9839-b6344f6b5011
+
+<br>
 
 ### Callback Validation
 `CallbackValidation`
@@ -35,6 +44,11 @@ Built with Kotlin, AndroidX Fragment, JankStats and StrictMode.
 - Catches a Fragment destroyed with a view that never got `onDestroyView`
 - Switches on the StrictMode VM checks for leaked receivers, closables and Activities
 <br>
+<br>
+
+https://github.com/user-attachments/assets/0a3111ae-08ec-4f7e-bc87-ca5deb58aa47
+
+<br>
 
 ### Leak Detection
 `LeakDetection`
@@ -44,6 +58,12 @@ Built with Kotlin, AndroidX Fragment, JankStats and StrictMode.
 - Counts a view its Fragment outlived apart from one that died alongside its Fragment
 - The first of those is the back stack case: a binding or `findViewById` result never cleared
 <br>
+<br>
+
+https://github.com/user-attachments/assets/df3eb66d-d82f-4659-b0f7-ccebb2b9460c
+
+<br>
+
 
 ### Main-Thread Blocking
 `MainThreadBlocking`
@@ -52,7 +72,13 @@ Built with Kotlin, AndroidX Fragment, JankStats and StrictMode.
 - Reports a screen that keeps the main thread busy for most of its first 5 seconds in front
 - Switches on the StrictMode thread checks for disk reads, disk writes and network
 - Names the first frame from your own package on a StrictMode stack, or says there is none
-<br><br>
+<br>
+<br>
+
+https://github.com/user-attachments/assets/6f04fe97-68b2-40c4-9f09-dd04d89b21c3
+
+<br>
+<br>
 
 ## Output
 
@@ -66,16 +92,6 @@ The same filter in the Android Studio Logcat window:
 
 ```
 tag:LifecycleDiagnostics | tag:CallbackValidation | tag:LeakDetection | tag:MainThreadBlocking
-```
-
-```
-D/LifecycleDiagnostics: HomeFeedFragment took ~18.42 ms to build its view
-W/LifecycleDiagnostics: SlowCreateActivity.onCreate took 412.35 ms  SLOW (over 50 ms)  [first time seen]
-W/CallbackValidation: SlowCreateActivity@3f2a1b (Activity) was started and then destroyed without ever reaching resumed
-W/LeakDetection: HomeFeedFragment (Fragment view, fragment still alive) was still in memory 3 of 3 times it was destroyed this session
-W/MainThreadBlocking: 18.4% of TripDetailFragment's frames were dropped while it was in front (37 of 201, over the 5.0% limit)
-W/MainThreadBlocking: TripDetailFragment kept the main thread busy for 62.7% of the first 4980 ms it was in front
-W/MainThreadBlocking: StrictMode DiskWriteViolation on the main thread with MapFragment (in MainActivity) in the foreground, caused by: java.io.File.createTempFile(File.java:2077)
 ```
 <br>
 
@@ -192,7 +208,7 @@ Two runnable apps plant the faults the library catches. Most screens come as a F
 
 `sample-views` groups its screens by the feature each one exercises, and every screen says on the home list what it plants and what the library should print because of it.
 
-**1 · Slow lifecycle callbacks** — `LifecycleDiagnostics`
+**1 · Slow lifecycle callbacks** - `LifecycleDiagnostics`
 
 | Screen | What it plants |
 | --- | --- |
@@ -201,7 +217,7 @@ Two runnable apps plant the faults the library catches. Most screens come as a F
 | `SlowViewBuildFragment` | 180 ms in `onCreateView` and 140 ms in `onViewCreated` |
 | `NestedParentFragment` | A slow child fragment in a child `FragmentManager` |
 
-**2 · Work on the main thread** — `MainThreadBlocking`
+**2 · Work on the main thread** - `MainThreadBlocking`
 
 | Screen | What it plants |
 | --- | --- |
@@ -212,7 +228,7 @@ Two runnable apps plant the faults the library catches. Most screens come as a F
 | `JankListActivity` | 12 ms of blocking work per row on a 400 row list |
 | `JankDialogActivity` | The same list inside a `DialogFragment`, in a window of its own |
 
-**3 · Screens that never go away** — `LeakDetection`, `CallbackValidation`
+**3 · Screens that never go away** - `LeakDetection`, `CallbackValidation`
 
 | Screen | What it plants |
 | --- | --- |
@@ -224,7 +240,7 @@ Two runnable apps plant the faults the library catches. Most screens come as a F
 | `ServiceBindLeakActivity` | A `ServiceConnection` bound in `onStart`, never unbound |
 | `LeakedClosableActivity` | A `FileInputStream` abandoned without being closed |
 
-**4 · Lifecycle order and shape** — `CallbackValidation`
+**4 · Lifecycle order and shape** - `CallbackValidation`
 
 | Screen | What it plants |
 | --- | --- |
