@@ -23,6 +23,43 @@ internal object StackSummary {
     )
 
     /**
+     * How many package segments an app package has to have before it is trusted. Two keeps a pair
+     * that agree on nothing but "com" from matching every frame on every stack.
+     */
+    private const val MIN_PACKAGE_SEGMENTS = 2
+
+    /**
+     * Works out the package an app's own classes live under, which is what lets a finding point at
+     * the app's line in a stack that is otherwise all framework and libraries.
+     *
+     * Neither input answers it alone. The installed id is not the code package whenever the build
+     * adds an applicationIdSuffix, which debug builds commonly do and this library is meant to be
+     * used from a debug build. The first screen's class name is one package too deep, since screens
+     * usually sit in a subpackage of their own. What the two share is the root the app was written
+     * under.
+     *
+     * Returns null when they share too little to be believed, in which case findings simply say
+     * nothing about the app's own frames rather than guessing at them.
+     */
+    fun appPackageOf(applicationId: String, firstScreenClassName: String): String? {
+        val idSegments = applicationId.split('.')
+        val classSegments = firstScreenClassName.split('.')
+
+        var shared = 0
+        while (shared < idSegments.size &&
+            shared < classSegments.size &&
+            idSegments[shared] == classSegments[shared]
+        ) {
+            shared++
+        }
+
+        if (shared < MIN_PACKAGE_SEGMENTS) {
+            return null
+        }
+        return idSegments.subList(0, shared).joinToString(".")
+    }
+
+    /**
      * Joins the first [limit] frames into one line, newest call first, and says how many were left
      * off the end.
      */
@@ -61,10 +98,48 @@ internal object StackSummary {
      * violation is noticed long afterwards, on whichever thread ran the collector, and carries the
      * stack of the code that registered or allocated the leaked object as its cause. Preferring the
      * cause is therefore what turns a finalizer stack into the registration site.
+     *
+     * [appPackage] is what [appPackageOf] worked out, or null when it could not. A violation raised
+     * deep inside a library can push the app's own frame past the ones printed, or leave the app off
+     * the stack altogether, and both are worth saying: the first is the only line anyone can act on,
+     * and the second means there is no such line at all.
      */
-    fun describeViolation(violation: Violation, limit: Int): String {
+    fun describeViolation(violation: Violation, limit: Int, appPackage: String?): String {
         val origin: Throwable = violation.cause ?: violation
-        return describe(dropPlumbing(origin.stackTrace), limit)
+        val frames = dropPlumbing(origin.stackTrace)
+        val stack = describe(frames, limit)
+
+        if (appPackage == null) {
+            // Nothing to match against, so the stack is all there is to say.
+            return stack
+        }
+
+        val appFrameIndex = firstFrameIn(frames, appPackage)
+        if (appFrameIndex < 0) {
+            // Said out loud because it is the answer to "is this one mine". A violation with none of
+            // the app's own code on the stack came from a library setting itself up, and there is no
+            // line of the app's to go and change.
+            return "$stack. No frame from $appPackage on this stack"
+        }
+
+        if (appFrameIndex < limit) {
+            // Already printed above, near the top, which is the ordinary case.
+            return stack
+        }
+
+        return "$stack. First frame from $appPackage: ${frames[appFrameIndex]}"
+    }
+
+    // Index of the first frame belonging to the given package, or -1. The dot is part of the test so
+    // that a package named travel does not claim a frame from one named travelagency.
+    private fun firstFrameIn(frames: Array<StackTraceElement>, appPackage: String): Int {
+        for (index in frames.indices) {
+            val className = frames[index].className
+            if (className == appPackage || className.startsWith("$appPackage.")) {
+                return index
+            }
+        }
+        return -1
     }
 
     private fun dropPlumbing(frames: Array<StackTraceElement>): Array<StackTraceElement> {

@@ -19,6 +19,10 @@ class StrictModeWatcher(private val logger: ValidationLogger) : StrictMode.OnVmV
     // here would leak exactly what detectActivityLeaks() below looks for.
     private var foregroundActivityName: String? = null
 
+    // The package the app's own classes live under, or null when it could not be worked out. Filled
+    // in below, from the first Activity the app creates.
+    private var appPackage: String? = null
+
     // Builds the StrictMode policy and installs it, the first time it is called.
     //
     // Must run from onActivityPreCreated and not from the library's install(): apps often call
@@ -29,6 +33,11 @@ class StrictModeWatcher(private val logger: ValidationLogger) : StrictMode.OnVmV
             return
         }
         installed = true
+
+        // Worked out here because this is the app's first Activity, and its class name is the only
+        // thing at hand that says where the app's own code lives rather than what it was installed
+        // as. See StackSummary.appPackageOf.
+        appPackage = StackSummary.appPackageOf(activity.packageName, activity.javaClass.name)
 
         // Seeding the Builder with the policy in force keeps whatever the app switched on for
         // itself; a plain Builder() would silently switch off every check the app asked for.
@@ -86,6 +95,7 @@ class StrictModeWatcher(private val logger: ValidationLogger) : StrictMode.OnVmV
         val origin = StackSummary.describeViolation(
             violation,
             ValidationConstants.VIOLATION_FRAMES_LOGGED,
+            appPackage,
         )
 
         logger.report(

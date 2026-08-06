@@ -18,6 +18,10 @@ class StrictModeThreadWatcher(
 
     private var installed = false
 
+    // The package the app's own classes live under, or null when it could not be worked out. Filled
+    // in below, from the first Activity the app creates.
+    private var appPackage: String? = null
+
     // Must run from onActivityPreCreated and not from the library's install(), for two reasons.
     // Apps often call setThreadPolicy() in Application.onCreate and that replaces the whole policy,
     // so anything installed earlier is thrown away. And a thread policy belongs to whichever thread
@@ -27,6 +31,11 @@ class StrictModeThreadWatcher(
             return
         }
         installed = true
+
+        // Worked out here because this is the app's first Activity, and its class name is the only
+        // thing at hand that says where the app's own code lives rather than what it was installed
+        // as. See StackSummary.appPackageOf.
+        appPackage = StackSummary.appPackageOf(activity.packageName, activity.javaClass.name)
 
         // Seeding the Builder with the policy in force keeps whatever the app switched on for
         // itself; a plain Builder() would silently switch off every check the app asked for.
@@ -62,6 +71,7 @@ class StrictModeThreadWatcher(
         val origin = StackSummary.describeViolation(
             violation,
             BlockingConstants.VIOLATION_FRAMES_LOGGED,
+            appPackage,
         )
 
         logger.report(
