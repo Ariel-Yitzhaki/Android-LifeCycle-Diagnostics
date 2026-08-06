@@ -5,21 +5,41 @@ import android.content.Intent
 import com.ariel.lifecycle.sampleviews.fragments.FragmentHostActivity
 import com.ariel.lifecycle.sampleviews.fragments.FragmentViewLeakCleanFragment
 import com.ariel.lifecycle.sampleviews.fragments.FragmentViewLeakFragment
+import com.ariel.lifecycle.sampleviews.fragments.NestedParentFragment
+import com.ariel.lifecycle.sampleviews.fragments.SlowViewBuildCleanFragment
+import com.ariel.lifecycle.sampleviews.fragments.SlowViewBuildFragment
+import com.ariel.lifecycle.sampleviews.fragments.ViewCaptureCleanFragment
+import com.ariel.lifecycle.sampleviews.fragments.ViewCaptureFragment
 import com.ariel.lifecycle.sampleviews.fragments.ViewModelLeakCleanFragment
 import com.ariel.lifecycle.sampleviews.fragments.ViewModelLeakFragment
+import com.ariel.lifecycle.sampleviews.fragments.ViewWithoutContainerFragment
+import com.ariel.lifecycle.sampleviews.core.HeavyRows
 import com.ariel.lifecycle.sampleviews.screens.ActivityLeakActivity
 import com.ariel.lifecycle.sampleviews.screens.ActivityLeakCleanActivity
+import com.ariel.lifecycle.sampleviews.screens.BusySettleActivity
+import com.ariel.lifecycle.sampleviews.screens.BusySettleCleanActivity
+import com.ariel.lifecycle.sampleviews.screens.FinishInStartActivity
+import com.ariel.lifecycle.sampleviews.screens.JankDialogActivity
 import com.ariel.lifecycle.sampleviews.screens.JankListActivity
 import com.ariel.lifecycle.sampleviews.screens.JankListCleanActivity
+import com.ariel.lifecycle.sampleviews.screens.LeakedClosableActivity
+import com.ariel.lifecycle.sampleviews.screens.LeakedClosableCleanActivity
 import com.ariel.lifecycle.sampleviews.screens.MainThreadDiskReadActivity
 import com.ariel.lifecycle.sampleviews.screens.MainThreadDiskReadCleanActivity
+import com.ariel.lifecycle.sampleviews.screens.MainThreadDiskWriteActivity
+import com.ariel.lifecycle.sampleviews.screens.MainThreadDiskWriteCleanActivity
+import com.ariel.lifecycle.sampleviews.screens.MainThreadNetworkActivity
+import com.ariel.lifecycle.sampleviews.screens.MainThreadNetworkCleanActivity
 import com.ariel.lifecycle.sampleviews.screens.RelaunchSelfActivity
 import com.ariel.lifecycle.sampleviews.screens.SecondaryProcessActivity
+import com.ariel.lifecycle.sampleviews.screens.ServiceBindLeakActivity
+import com.ariel.lifecycle.sampleviews.screens.ServiceBindLeakCleanActivity
 import com.ariel.lifecycle.sampleviews.screens.SlowCreateActivity
 import com.ariel.lifecycle.sampleviews.screens.SlowCreateCleanActivity
 import com.ariel.lifecycle.sampleviews.screens.SlowResumeActivity
 import com.ariel.lifecycle.sampleviews.screens.SlowResumeCleanActivity
 import com.ariel.lifecycle.sampleviews.screens.StartForResultActivity
+import com.ariel.lifecycle.sampleviews.screens.StrayCallbackActivity
 import com.ariel.lifecycle.sampleviews.screens.UnregisteredReceiverActivity
 import com.ariel.lifecycle.sampleviews.screens.UnregisteredReceiverCleanActivity
 
@@ -60,7 +80,9 @@ object ScreenCatalog {
             "tag:LifecycleDiagnostics | tag:CallbackValidation | tag:LeakDetection | " +
             "tag:MainThreadBlocking\n\n" +
             "Warn lines (W) are findings. Debug lines (D) are ordinary measurements. Rotating any " +
-            "screen adds a [configuration change] note to its timings."
+            "screen adds a [configuration change] note to its timings. Leak findings need a class " +
+            "destroyed at least three times, so open those screens four times and wait a few " +
+            "seconds."
 
     val categories: List<ScreenCategory> = listOf(
 
@@ -69,10 +91,10 @@ object ScreenCatalog {
             tags = "LifecycleDiagnostics",
             explanation =
                 "Every lifecycle callback of every screen is timed, and anything over 50 ms is " +
-                    "flagged SLOW. Work done inline in onCreate or onResume runs before the screen " +
-                    "can draw, so the user waits for all of it. Open a FAULT screen and the warning " +
-                    "appears as it opens; the CONTROL beside it does the same work off the main " +
-                    "thread and only prints ordinary timings.",
+                    "flagged SLOW. Work done inline in onCreate, onResume or a fragment's view " +
+                    "building runs before the screen can draw, so the user waits for all of it. " +
+                    "Open a FAULT screen and the warning appears as it opens; the CONTROL beside " +
+                    "it does the same work off the main thread and only prints ordinary timings.",
             screens = listOf(
                 screen(
                     name = "SlowCreateActivity",
@@ -84,8 +106,7 @@ object ScreenCatalog {
                 screen(
                     name = "SlowCreateCleanActivity",
                     fault = "CONTROL — the same 400 ms, moved to a background dispatcher",
-                    expect = "no SLOW onCreate. The very first visit can still cross 50 ms while " +
-                        "the coroutine classes load, so visit it twice",
+                    expect = "no SLOW onCreate, on the first visit as well as later ones",
                 ) { Intent(it, SlowCreateCleanActivity::class.java) },
 
                 screen(
@@ -102,6 +123,33 @@ object ScreenCatalog {
                     expect = "onResume timings in single-digit milliseconds, however many times " +
                         "you leave and return",
                 ) { Intent(it, SlowResumeCleanActivity::class.java) },
+
+                screen(
+                    name = "SlowViewBuildFragment",
+                    fault = "FAULT — ${SlowViewBuildFragment.INFLATE_MS} ms in onCreateView() and " +
+                        "${SlowViewBuildFragment.WIRE_UP_MS} ms in onViewCreated()",
+                    expect = "\"SlowViewBuildFragment took ~" +
+                        "${SlowViewBuildFragment.INFLATE_MS + SlowViewBuildFragment.WIRE_UP_MS} ms " +
+                        "to build its view SLOW\" — one number covering both callbacks, because a " +
+                        "fragment's view is not finished until the second returns",
+                ) { FragmentHostActivity.intent(it, SlowViewBuildFragment::class.java) },
+
+                screen(
+                    name = "SlowViewBuildCleanFragment",
+                    fault = "CONTROL — the same work, done off the main thread once the view exists",
+                    expect = "a view-build time around a tenth of the FAULT screen's. The first " +
+                        "fragment opened in a process still pays to load the fragment machinery " +
+                        "and can cross 50 ms on its own, so judge this one on the second visit",
+                ) { FragmentHostActivity.intent(it, SlowViewBuildCleanFragment::class.java) },
+
+                screen(
+                    name = "NestedParentFragment",
+                    fault = "EXERCISE — a parent fragment hosting a slow child in its own child " +
+                        "FragmentManager",
+                    expect = "timings for NestedChildFragment under its own name, including a SLOW " +
+                        "view build. A watcher registered only on the Activity's FragmentManager " +
+                        "would report none of them",
+                ) { FragmentHostActivity.intent(it, NestedParentFragment::class.java) },
             ),
         ),
 
@@ -109,11 +157,12 @@ object ScreenCatalog {
             title = "2 · Work on the main thread",
             tags = "MainThreadBlocking",
             explanation =
-                "Three things are watched here: any single main-thread message running longer " +
-                    "than 200 ms, printed with a snapshot of what the thread was doing; the share " +
-                    "of frames a screen dropped while the user was on it; and disk or network " +
-                    "calls made on the main thread, which StrictMode catches. Every finding names " +
-                    "the screen that was in front at the time.",
+                "Four things are watched here: any single main-thread message running longer than " +
+                    "200 ms, printed with a snapshot of what the thread was doing; a screen that " +
+                    "keeps the main thread busy for most of its first five seconds, however small " +
+                    "the individual messages; the share of frames a screen dropped while the user " +
+                    "was on it; and disk or network calls made on the main thread, which " +
+                    "StrictMode catches. Every finding names the screen that was in front.",
             screens = listOf(
                 screen(
                     name = "MainThreadDiskReadActivity",
@@ -130,12 +179,55 @@ object ScreenCatalog {
                 ) { Intent(it, MainThreadDiskReadCleanActivity::class.java) },
 
                 screen(
+                    name = "MainThreadDiskWriteActivity",
+                    fault = "FAULT — writes and fsyncs 2 MiB on the main thread in onCreate()",
+                    expect = "StrictMode DiskWriteViolation lines naming SampleFiles.writeBlocking. " +
+                        "Writes are the half of disk I/O that feels like it can be fired and " +
+                        "forgotten; the thread still waits",
+                ) { Intent(it, MainThreadDiskWriteActivity::class.java) },
+
+                screen(
+                    name = "MainThreadDiskWriteCleanActivity",
+                    fault = "CONTROL — the same write, moved to Dispatchers.IO",
+                    expect = "nothing under this tag",
+                ) { Intent(it, MainThreadDiskWriteCleanActivity::class.java) },
+
+                screen(
+                    name = "MainThreadNetworkActivity",
+                    fault = "FAULT — opens a TCP connection on the main thread in onCreate()",
+                    expect = "a StrictMode NetworkViolation naming SampleSocket.connectBlocking. " +
+                        "Loopback only, so it works with no network and nothing leaves the device",
+                ) { Intent(it, MainThreadNetworkActivity::class.java) },
+
+                screen(
+                    name = "MainThreadNetworkCleanActivity",
+                    fault = "CONTROL — the same connection, moved to Dispatchers.IO",
+                    expect = "nothing under this tag",
+                ) { Intent(it, MainThreadNetworkCleanActivity::class.java) },
+
+                screen(
+                    name = "BusySettleActivity",
+                    fault = "FAULT — 60 ms of main-thread work every 80 ms, for six seconds",
+                    expect = "\"kept the main thread busy for ~75% of the first 5000 ms it was in " +
+                        "front\". No message here is slow and no callback is either — this is the " +
+                        "one the other two detectors cannot see",
+                ) { Intent(it, BusySettleActivity::class.java) },
+
+                screen(
+                    name = "BusySettleCleanActivity",
+                    fault = "CONTROL — the same chunks and the same total work, on Dispatchers.Default",
+                    expect = "no busy finding. The main thread only ever draws the results",
+                ) { Intent(it, BusySettleCleanActivity::class.java) },
+
+                screen(
                     name = "JankListActivity",
-                    fault = "FAULT — 400 rows, each costing 12 ms of blocking work inside " +
-                        "onBindViewHolder(). Scroll hard",
+                    fault = "FAULT — ${HeavyRows.ROW_COUNT} rows, each costing ${HeavyRows.COST_MS} ms " +
+                        "of blocking work inside onBindViewHolder(). Scroll hard",
                     expect = "main-thread messages over 200 ms while you scroll, with " +
-                        "BusyWork.spin on the stack. The dropped-frame percentage is unreliable " +
-                        "on an emulator — check that half on a physical device",
+                        "BusyWork.spin on the stack. The dropped-frame percentage often reads 0% " +
+                        "on an emulator, because a frame that is always late gets a later " +
+                        "deadline to match — check that half on a physical device, or use " +
+                        "JankDialogActivity, which trips it here",
                 ) { Intent(it, JankListActivity::class.java) },
 
                 screen(
@@ -144,6 +236,15 @@ object ScreenCatalog {
                     expect = "rows that read \"computing…\" and then fill in, and no main-thread " +
                         "message over 200 ms while scrolling",
                 ) { Intent(it, JankListCleanActivity::class.java) },
+
+                screen(
+                    name = "JankDialogActivity",
+                    fault = "EXERCISE — puts the same heavy list inside a DialogFragment",
+                    expect = "a dropped-frame percentage and a busy-thread finding, both naming " +
+                        "JankDialogFragment rather than the Activity under it. This is the " +
+                        "frame-drop fixture that works on an emulator: a dialog's first layout " +
+                        "blows one deadline outright, where a long scroll only stretches them",
+                ) { Intent(it, JankDialogActivity::class.java) },
             ),
         ),
 
@@ -156,7 +257,8 @@ object ScreenCatalog {
                     "survivor proves nothing, so nothing is printed until the same class has been " +
                     "destroyed three times with at least half of them still in memory: open a " +
                     "FAULT screen, press Back, and repeat four times, then wait a few seconds. " +
-                    "StrictMode's VM checks give a second opinion under CallbackValidation.",
+                    "StrictMode's VM checks — leaked registration objects, leaked closables and " +
+                    "Activity leaks — give a second opinion under CallbackValidation.",
             screens = listOf(
                 screen(
                     name = "ActivityLeakActivity",
@@ -188,19 +290,33 @@ object ScreenCatalog {
                 ) { FragmentHostActivity.intent(it, FragmentViewLeakCleanFragment::class.java) },
 
                 screen(
+                    name = "ViewCaptureFragment",
+                    fault = "FAULT — hands its root view to a process-lifetime cache",
+                    expect = "after four taps of its button, two findings: the view is reported, " +
+                        "and so is the fragment. Keeping a fragment's root view keeps the " +
+                        "fragment too — androidx tags that view with the fragment that made it — " +
+                        "and the view holds its Context, so the Activity goes with them",
+                ) { FragmentHostActivity.intent(it, ViewCaptureFragment::class.java) },
+
+                screen(
+                    name = "ViewCaptureCleanFragment",
+                    fault = "CONTROL — caches the state the view was showing, never the view",
+                    expect = "silence. A String holds no Context, so it can live for the session",
+                ) { FragmentHostActivity.intent(it, ViewCaptureCleanFragment::class.java) },
+
+                screen(
                     name = "ViewModelLeakFragment",
-                    fault = "FAULT — its ViewModel registers with a process-lifetime singleton and " +
-                        "never unregisters",
-                    expect = "nothing, and that is the lesson. The count on the screen climbs on " +
-                        "every visit, but the library watches Activities, Fragments and Fragment " +
-                        "views — a leaked ViewModel holding none of them is outside what it can see",
+                    fault = "FAULT — its ViewModel registers with a global singleton, never " +
+                        "unregisters, and holds a callback into the fragment",
+                    expect = "after four taps of its button, \"ViewModelLeakFragment (Fragment) " +
+                        "was still in memory…\". The chain is registry → ViewModel → lambda → " +
+                        "fragment; the library names the end of it, not the middle",
                 ) { FragmentHostActivity.intent(it, ViewModelLeakFragment::class.java) },
 
                 screen(
                     name = "ViewModelLeakCleanFragment",
-                    fault = "CONTROL — the same registration, undone in onCleared()",
-                    expect = "nothing here either. The difference between this screen and the one " +
-                        "above shows on the device, in the registry count, not in Logcat",
+                    fault = "CONTROL — the same registration and callback, both dropped in onCleared()",
+                    expect = "silence, and a registry count on screen that never grows",
                 ) { FragmentHostActivity.intent(it, ViewModelLeakCleanFragment::class.java) },
 
                 screen(
@@ -209,7 +325,8 @@ object ScreenCatalog {
                         "unregisters it",
                     expect = "after four visits, \"UnregisteredReceiverActivity (Activity) was " +
                         "still in memory…\". The receiver holds the Activity, so the Activity is " +
-                        "what gets reported",
+                        "what gets reported — Android 16 does not raise its own leaked-receiver " +
+                        "complaint here, which is exactly why watching the screen is worth doing",
                 ) { Intent(it, UnregisteredReceiverActivity::class.java) },
 
                 screen(
@@ -218,6 +335,35 @@ object ScreenCatalog {
                     expect = "registrations and unregistrations staying equal on screen, and " +
                         "nothing under LeakDetection",
                 ) { Intent(it, UnregisteredReceiverCleanActivity::class.java) },
+
+                screen(
+                    name = "ServiceBindLeakActivity",
+                    fault = "FAULT — binds to a Service in onStart() and never unbinds",
+                    expect = "after four visits, \"ServiceBindLeakActivity (Activity) was still " +
+                        "in memory…\" — the connection is an inner class, so it holds the screen. " +
+                        "StrictMode's own leaked-registration check is switched on for this too, " +
+                        "but Android 16 does not raise it for an outstanding binding",
+                ) { Intent(it, ServiceBindLeakActivity::class.java) },
+
+                screen(
+                    name = "ServiceBindLeakCleanActivity",
+                    fault = "CONTROL — the same bind, undone in onStop()",
+                    expect = "binds and unbinds staying equal on screen, and nothing under either tag",
+                ) { Intent(it, ServiceBindLeakCleanActivity::class.java) },
+
+                screen(
+                    name = "LeakedClosableActivity",
+                    fault = "FAULT — opens a FileInputStream and abandons it without closing",
+                    expect = "a StrictMode LeakedClosableObject finding naming the line that " +
+                        "opened the stream. It arrives from the finalizer, so it is late by " +
+                        "design — the screen asks for a collection to bring it forward",
+                ) { Intent(it, LeakedClosableActivity::class.java) },
+
+                screen(
+                    name = "LeakedClosableCleanActivity",
+                    fault = "CONTROL — the same stream, closed by use {}",
+                    expect = "nothing, even though this screen asks for the same collection",
+                ) { Intent(it, LeakedClosableCleanActivity::class.java) },
             ),
         ),
 
@@ -227,11 +373,42 @@ object ScreenCatalog {
             explanation =
                 "A small state machine follows every live Activity and Fragment and reports a " +
                     "step the lifecycle should not take: a screen started and then destroyed " +
-                    "without ever reaching resumed, onStart and onStop counts that do not " +
-                    "balance, a Fragment destroyed while its view is still around, or one " +
-                    "Activity class destroyed and recreated more than three times in ten " +
-                    "seconds, which is a restart loop.",
+                    "without ever reaching resumed, a callback arriving from a state it cannot " +
+                    "follow, onStart and onStop counts that do not balance, a Fragment destroyed " +
+                    "with a view that was never torn down, or one Activity class destroyed and " +
+                    "recreated more than three times in ten seconds, which is a restart loop.",
             screens = listOf(
+                screen(
+                    name = "FinishInStartActivity",
+                    fault = "FAULT — inflates its view, then decides in onStart() to finish()",
+                    expect = "\"was started and then destroyed without ever reaching resumed, so " +
+                        "its view was built for a screen the user never got to use\". Deciding " +
+                        "the same thing in onCreate costs nothing and is the fix",
+                ) { Intent(it, FinishInStartActivity::class.java) },
+
+                screen(
+                    name = "StrayCallbackActivity",
+                    fault = "FAULT — calls the framework's own onStart() a second time, by hand",
+                    expect = "\"received onStart while it was RESUMED\" on each tap, and then, " +
+                        "when you press Back, a second finding about onStarts outnumbering onStops",
+                ) { Intent(it, StrayCallbackActivity::class.java) },
+
+                screen(
+                    name = "ViewWithoutContainerFragment",
+                    fault = "EXERCISE — added with add(fragment, tag) and still inflates a view " +
+                        "from onCreateView()",
+                    expect = "nothing, and that is the answer. This is as close as app code gets " +
+                        "to a view created without a matching onDestroyView; androidx pairs the " +
+                        "two on every code path, so the check is for a host that gets it wrong. " +
+                        "Nothing appears on screen — the view has nowhere to go",
+                ) {
+                    FragmentHostActivity.intent(
+                        it,
+                        ViewWithoutContainerFragment::class.java,
+                        withoutContainer = true,
+                    )
+                },
+
                 screen(
                     name = "RelaunchSelfActivity",
                     fault = "EXERCISE — finishes and relaunches itself five times, about 700 ms apart",
@@ -261,7 +438,7 @@ object ScreenCatalog {
                 screen(
                     name = "SecondaryProcessActivity",
                     fault = "EXERCISE — runs in its own process (android:process=\":secondary\")",
-                    expect = "the same tags arriving from a different pid. Compare the pid shown " +
+                    expect = "all four tags arriving from a different pid. Compare the pid shown " +
                         "on that screen with the one at the top of this one",
                 ) { Intent(it, SecondaryProcessActivity::class.java) },
             ),

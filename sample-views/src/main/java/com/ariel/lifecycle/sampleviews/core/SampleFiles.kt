@@ -23,6 +23,12 @@ object SampleFiles {
     private const val READ_CHUNK = 512
     private const val WRITE_CHUNK = 64 * 1024
 
+    /** How much [writeBlocking] writes. Smaller than the blob: an fsync is expensive on its own. */
+    private const val COPY_BYTES = 2L * 1024 * 1024
+
+    /** Keeps each copy on its own path, so no write is served from a file that already exists. */
+    private var copyCounter = 0
+
     fun file(context: Context): File = File(context.filesDir, FILE_NAME)
 
     /** Idempotent. Called from a background thread at app start, and defensively before each read. */
@@ -40,6 +46,43 @@ object SampleFiles {
         FileOutputStream(target).use { out ->
             repeat((SIZE_BYTES / WRITE_CHUNK).toInt()) { out.write(block) }
         }
+    }
+
+    /**
+     * Synchronous write of a copy of the blob. Whichever thread calls this pays for all of it, and
+     * on the main thread it is what StrictMode reports as a disk write.
+     *
+     * A fresh file name every time, so the write is real rather than a no-op, and each copy is
+     * deleted once its size has been read back.
+     */
+    fun writeBlocking(context: Context): String {
+        val started = SystemClock.elapsedRealtime()
+        val target = File(context.filesDir, "diagnostics-sample-copy-${copyCounter++}.bin")
+
+        val block = ByteArray(WRITE_CHUNK)
+        var written = 0L
+        FileOutputStream(target).use { out ->
+            repeat((COPY_BYTES / WRITE_CHUNK).toInt()) {
+                out.write(block)
+                written += WRITE_CHUNK
+            }
+            // Forces the bytes past the page cache, so the cost is a write and not a memcpy.
+            out.fd.sync()
+        }
+        val onDisk = target.length()
+        target.delete()
+
+        val elapsed = SystemClock.elapsedRealtime() - started
+        return String.format(
+            Locale.US,
+            "%,d KiB written in %,d chunks of %d KiB, fsync'd and deleted — %d ms on %s (%,d B on disk)",
+            written / 1024,
+            written / WRITE_CHUNK,
+            WRITE_CHUNK / 1024,
+            elapsed,
+            Thread.currentThread().name,
+            onDisk,
+        )
     }
 
     /** Synchronous read of the whole blob. Whichever thread calls this pays for all of it. */

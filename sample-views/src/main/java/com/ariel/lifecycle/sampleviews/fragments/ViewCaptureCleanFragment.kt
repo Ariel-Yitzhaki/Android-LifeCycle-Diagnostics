@@ -7,18 +7,17 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
-import androidx.fragment.app.viewModels
 import com.ariel.lifecycle.sampleviews.R
 import com.ariel.lifecycle.sampleviews.ScreenCatalog
-import com.ariel.lifecycle.sampleviews.core.GlobalListenerRegistry
+import com.ariel.lifecycle.sampleviews.core.RetainedViews
 import com.ariel.lifecycle.sampleviews.databinding.FragmentSimpleBinding
 
-/** CONTROL: the same registration and the same callback, both undone in `onCleared`. */
-class ViewModelLeakCleanFragment : Fragment() {
+/**
+ * CONTROL: caches what a view is worth caching for — the data it was showing — and lets the view go.
+ */
+class ViewCaptureCleanFragment : Fragment() {
 
     private var binding: FragmentSimpleBinding? = null
-
-    private val viewModel: CleanRegistryViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -28,36 +27,37 @@ class ViewModelLeakCleanFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // A String, not a View. It holds no Context, so it can live for the whole session.
+        lastRenderedAt = "visit ${++visits}"
+
         val views = requireNotNull(binding)
         views.screenName.text = javaClass.simpleName
         views.screenFault.text =
-            "CONTROL — the same registration and callback, both dropped in onCleared()\n" +
+            "CONTROL — caches the state the view was showing, never the view\n" +
                 "Look for: ${ScreenCatalog.expectationFor(javaClass.simpleName)}"
+        views.screenStatus.text =
+            "Views held by RetainedViews: ${RetainedViews.size} — none of them this screen's"
         views.screenNote.text =
-            "Tap below as often as you like: the entry is removed and the callback dropped every " +
-                "time the ViewModel is cleared, so the count never grows and no fragment is held. " +
-                "Compare it with ViewModelLeakFragment."
-
-        viewModel.onUpdate = { render() }
+            "Cached instead: \"$lastRenderedAt\". Re-inflating a view is cheap; keeping one alive " +
+                "for the life of the process is not."
 
         views.actionPrimary.isVisible = true
         views.actionPrimary.text = "Replace this fragment with a fresh copy"
         views.actionPrimary.setOnClickListener {
             parentFragmentManager.commit {
-                replace(R.id.fragmentContainer, ViewModelLeakCleanFragment())
+                replace(R.id.fragmentContainer, ViewCaptureCleanFragment())
             }
         }
-        render()
-    }
-
-    private fun render() {
-        binding?.screenStatus?.text =
-            "This screen's ViewModel: @${Integer.toHexString(System.identityHashCode(viewModel))}\n" +
-                "GlobalListenerRegistry holds ${GlobalListenerRegistry.size}: ${GlobalListenerRegistry.describe()}"
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         binding = null
+    }
+
+    private companion object {
+        var visits = 0
+        var lastRenderedAt = "nothing yet"
     }
 }

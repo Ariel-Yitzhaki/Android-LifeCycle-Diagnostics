@@ -187,23 +187,60 @@ Every tunable value lives in one `object` per feature. Edit the constant and reb
 
 Two runnable apps plant the faults the library catches. Most screens come as a FAULT and CONTROL pair: the same work done wrong, then done right, so the difference in Logcat is the whole lesson.
 
-- `sample-views` covers 19 Activity and Fragment screens using Views, view binding and RecyclerView
+- `sample-views` covers 38 Activity and Fragment screens using Views, view binding and RecyclerView
 - `sample-compose` covers 19 routes in one Activity using Compose and Navigation
+
+`sample-views` groups its screens by the feature each one exercises, and every screen says on the home list what it plants and what the library should print because of it.
+
+**1 · Slow lifecycle callbacks** — `LifecycleDiagnostics`
 
 | Screen | What it plants |
 | --- | --- |
-| `slow-create` | 400 ms of real CPU work inline in `onCreate` |
-| `slow-resume` | The same 400 ms on every resume |
-| `main-thread-disk-read` | A 4 MiB file read synchronously on the main thread |
-| `leaky-activity` | The Activity stored in a companion object field, never cleared |
+| `SlowCreateActivity` | 400 ms of real CPU work inline in `onCreate` |
+| `SlowResumeActivity` | The same 400 ms on every resume |
+| `SlowViewBuildFragment` | 180 ms in `onCreateView` and 140 ms in `onViewCreated` |
+| `NestedParentFragment` | A slow child fragment in a child `FragmentManager` |
+
+**2 · Work on the main thread** — `MainThreadBlocking`
+
+| Screen | What it plants |
+| --- | --- |
+| `MainThreadDiskReadActivity` | A 4 MiB file read synchronously on the main thread |
+| `MainThreadDiskWriteActivity` | 2 MiB written and fsynced on the main thread |
+| `MainThreadNetworkActivity` | A TCP connect on the main thread, over loopback |
+| `BusySettleActivity` | 60 ms of work every 80 ms for six seconds, no single message slow |
+| `JankListActivity` | 12 ms of blocking work per row on a 400 row list |
+| `JankDialogActivity` | The same list inside a `DialogFragment`, in a window of its own |
+
+**3 · Screens that never go away** — `LeakDetection`, `CallbackValidation`
+
+| Screen | What it plants |
+| --- | --- |
+| `ActivityLeakActivity` | The Activity stored in a companion object field, never cleared |
 | `FragmentViewLeakFragment` | A view binding never nulled in `onDestroyView` |
-| `leaky-viewmodel` | A ViewModel registered with a process-lifetime singleton |
-| `unregistered-receiver` | A `BroadcastReceiver` registered in `onStart`, never unregistered |
-| `jank-list` | 12 ms of blocking work per row on a 400 row list |
-| `recomposition-churn` | A 60 Hz ticker read at the top of the tree, nothing remembered |
-| `relaunch-self` | Finishes and relaunches itself 5 times |
-| `start-for-result` | A clean round trip to a second Activity and back |
-| `secondary-process` | A screen declared with `android:process=":secondary"` |
+| `ViewCaptureFragment` | The fragment's root view handed to a process-lifetime cache |
+| `ViewModelLeakFragment` | A ViewModel in a global registry, holding a callback into the fragment |
+| `UnregisteredReceiverActivity` | A `BroadcastReceiver` registered in `onStart`, never unregistered |
+| `ServiceBindLeakActivity` | A `ServiceConnection` bound in `onStart`, never unbound |
+| `LeakedClosableActivity` | A `FileInputStream` abandoned without being closed |
+
+**4 · Lifecycle order and shape** — `CallbackValidation`
+
+| Screen | What it plants |
+| --- | --- |
+| `FinishInStartActivity` | `finish()` in `onStart`, after the view is already built |
+| `StrayCallbackActivity` | A second `onStart` delivered by hand |
+| `ViewWithoutContainerFragment` | A view inflated by a fragment added with no container |
+| `RelaunchSelfActivity` | Finishes and relaunches itself 5 times |
+| `StartForResultActivity` | A clean round trip to a second Activity and back |
+
+**5 · A second process**
+
+| Screen | What it plants |
+| --- | --- |
+| `SecondaryProcessActivity` | A screen declared with `android:process=":secondary"` |
+
+`sample-compose` still covers the shorter original list, including `recomposition-churn`, which has no Views equivalent.
 <br>
 
 ## Limitations

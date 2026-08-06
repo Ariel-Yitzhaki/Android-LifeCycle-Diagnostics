@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- MainThreadNetworkActivity opens a TCP socket to this app's own loopback listener. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".SampleViewsApplication"
         android:allowBackup="false"
@@ -18,24 +21,49 @@
             </intent-filter>
         </activity>
 
+        <!-- 1 · Slow lifecycle callbacks -->
         <activity android:name=".screens.SlowCreateActivity" android:exported="false" />
         <activity android:name=".screens.SlowCreateCleanActivity" android:exported="false" />
         <activity android:name=".screens.SlowResumeActivity" android:exported="false" />
         <activity android:name=".screens.SlowResumeCleanActivity" android:exported="false" />
+
+        <!-- 2 · Work on the main thread -->
         <activity android:name=".screens.MainThreadDiskReadActivity" android:exported="false" />
         <activity android:name=".screens.MainThreadDiskReadCleanActivity" android:exported="false" />
+        <activity android:name=".screens.MainThreadDiskWriteActivity" android:exported="false" />
+        <activity android:name=".screens.MainThreadDiskWriteCleanActivity" android:exported="false" />
+        <activity android:name=".screens.MainThreadNetworkActivity" android:exported="false" />
+        <activity android:name=".screens.MainThreadNetworkCleanActivity" android:exported="false" />
+        <activity android:name=".screens.BusySettleActivity" android:exported="false" />
+        <activity android:name=".screens.BusySettleCleanActivity" android:exported="false" />
+        <activity android:name=".screens.JankListActivity" android:exported="false" />
+        <activity android:name=".screens.JankListCleanActivity" android:exported="false" />
+        <activity android:name=".screens.JankDialogActivity" android:exported="false" />
+
+        <!-- 3 · Screens that never go away -->
         <activity android:name=".screens.ActivityLeakActivity" android:exported="false" />
         <activity android:name=".screens.ActivityLeakCleanActivity" android:exported="false" />
         <activity android:name=".screens.UnregisteredReceiverActivity" android:exported="false" />
         <activity android:name=".screens.UnregisteredReceiverCleanActivity" android:exported="false" />
-        <activity android:name=".screens.JankListActivity" android:exported="false" />
-        <activity android:name=".screens.JankListCleanActivity" android:exported="false" />
+        <activity android:name=".screens.ServiceBindLeakActivity" android:exported="false" />
+        <activity android:name=".screens.ServiceBindLeakCleanActivity" android:exported="false" />
+        <activity android:name=".screens.LeakedClosableActivity" android:exported="false" />
+        <activity android:name=".screens.LeakedClosableCleanActivity" android:exported="false" />
+
+        <!-- 4 · Lifecycle order and shape -->
+        <activity android:name=".screens.FinishInStartActivity" android:exported="false" />
+        <activity android:name=".screens.StrayCallbackActivity" android:exported="false" />
         <activity android:name=".screens.RelaunchSelfActivity" android:exported="false" />
         <activity android:name=".screens.StartForResultActivity" android:exported="false" />
         <activity android:name=".screens.ResultProviderActivity" android:exported="false" />
+
+        <!-- Host for every fragment-based screen. -->
         <activity android:name=".fragments.FragmentHostActivity" android:exported="false" />
 
-        <!-- The only component in this app that does not run in the default process. -->
+        <!-- Bound by ServiceBindLeakActivity and its control. Does nothing. -->
+        <service android:name=".core.SampleService" android:exported="false" />
+
+        <!-- 5 · The only component in this app that does not run in the default process. -->
         <activity
             android:name=".screens.SecondaryProcessActivity"
             android:exported="false"
