@@ -129,23 +129,23 @@ com.ariel.diagnostics/
 
 ## Setup
 
-There are two ways in. Clone the repository and run the sample apps to see what the library reports, or add it to an app of your own.
+There are two ways in. Clone the repository and run the sample app to see what the library reports, or add it to an app of your own.
 
-### Option 1: Run the sample apps
+### Option 1: Run the sample app
 
-Nothing to configure. Both samples depend on the library as a local module, so cloning and running is the whole process. There is no dependency to add, no version to pick and no key to supply.
+Nothing to configure. The sample depends on the library as a local module, so cloning and running is the whole process. There is no dependency to add, no version to pick and no key to supply.
 
 ```bash
 git clone https://github.com/Ariel-Yitzhaki/Android-LifeCycle-Diagnostics.git
 ```
 
-Open the project in Android Studio and run the `sample-views` or `sample-compose` configuration, or install both from the command line:
+Open the project in Android Studio and run the `sample-views` configuration, or install it from the command line:
 
 ```bash
-./gradlew :sample-views:installDebug :sample-compose:installDebug
+./gradlew :sample-views:installDebug
 ```
 
-Then filter Logcat to the four tags and tap through the screens. See [Sample Apps](#sample-apps) for what each one plants.
+Then filter Logcat to the four tags and tap through the screens. See [Sample App](#sample-app) for what each screen plants.
 
 ### Option 2: Add it to your own app
 
@@ -199,14 +199,11 @@ Every tunable value lives in one `object` per feature. Edit the constant and reb
 | `MIN_SETTLE_MS` | `blocking/BlockingConstants.kt` | 500 |
 <br>
 
-## Sample Apps
+## Sample App
 
-Two runnable apps plant the faults the library catches. Most screens come as a FAULT and CONTROL pair: the same work done wrong, then done right, so the difference in Logcat is the whole lesson.
+`sample-views` is a runnable app that plants the faults the library catches, across 38 Activity and Fragment screens using Views, view binding and RecyclerView. Most screens come as a FAULT and CONTROL pair: the same work done wrong, then done right, so the difference in Logcat is the whole lesson.
 
-- `sample-views` covers 38 Activity and Fragment screens using Views, view binding and RecyclerView
-- `sample-compose` covers 19 routes in one Activity using Compose and Navigation
-
-`sample-views` groups its screens by the feature each one exercises, and every screen says on the home list what it plants and what the library should print because of it.
+It groups its screens by the feature each one exercises, and every screen says on the home list what it plants and what the library should print because of it.
 
 **1 · Slow lifecycle callbacks** - `LifecycleDiagnostics`
 
@@ -255,8 +252,6 @@ Two runnable apps plant the faults the library catches. Most screens come as a F
 | Screen | What it plants |
 | --- | --- |
 | `SecondaryProcessActivity` | A screen declared with `android:process=":secondary"` |
-
-`sample-compose` still covers the shorter original list, including `recomposition-churn`, which has no Views equivalent.
 <br>
 
 ## Limitations

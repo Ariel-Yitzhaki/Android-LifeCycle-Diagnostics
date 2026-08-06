@@ -9,3 +9,4 @@ local.properties
 .externalNativeBuild
 .cxx
 /.claude
+/sample-compose

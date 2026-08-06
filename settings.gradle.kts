@@ -22,4 +22,9 @@ dependencyResolutionManagement {
 rootProject.name = "Android-LifeCycle-Diagnostics"
 include(":Diagnostics")
 include(":sample-views")
-include(":sample-compose")
+
+// sample-compose is kept out of the repository. Included only when the directory is present
+// locally, so a clone does not get a module with no directory behind it.
+if (file("sample-compose").exists()) {
+    include(":sample-compose")
+}
