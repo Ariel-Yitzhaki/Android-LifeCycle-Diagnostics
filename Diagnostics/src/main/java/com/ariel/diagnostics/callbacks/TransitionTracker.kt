@@ -135,8 +135,8 @@ class TransitionTracker(
         record.state = next
     }
 
-    // Runs the two checks that can only be answered once a component is finished with: did it ever
-    // reach the foreground, and did its starts and stops balance.
+    // Runs the two checks that can only be answered once a component is finished with: was it built
+    // and then thrown away without the user ever reaching it, and did its starts and stops balance.
     private fun reportEndOfLife(record: ComponentRecord) {
         if (!record.sawCreate) {
             // The library was installed after this component's onCreate, so its counts are missing
@@ -144,8 +144,23 @@ class TransitionTracker(
             return
         }
 
-        if (!record.everResumed) {
-            logger.report(record.label(), "was destroyed without ever reaching resumed")
+        // Never having started is not the same as never having resumed, and only the second is
+        // worth a finding.
+        //
+        // A component that never started was finished before the framework would have shown it,
+        // which is what a launcher screen does when it decides in its own onCreate where to send
+        // the user, and what a fragment does when it is replaced in the transaction that added it.
+        // Nothing was inflated and nothing was wasted, and moveTo() above already treats that same
+        // step as a legal one.
+        //
+        // Starting and then never resuming is the case that costs something: the view was inflated,
+        // laid out and put on screen for a component the user never got to touch.
+        if (record.startCount > 0 && !record.everResumed) {
+            logger.report(
+                record.label(),
+                "was started and then destroyed without ever reaching resumed, so its view was " +
+                    "built for a screen the user never got to use",
+            )
         }
 
         if (record.startCount != record.stopCount) {
